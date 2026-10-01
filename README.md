@@ -50,7 +50,7 @@ Si tu accèdes à l'application depuis une autre machine que celle qui exécute 
 
 ## Production (VPS)
 
-`docker-compose.prod.yml` + `deploy/Caddyfile` : HTTPS automatique (Caddy / Let's Encrypt), interface sur `https://DOMAIN`, API sur `https://DOMAIN/api`, base et API non exposées. Réglages dans `.env.production` (modèle : `.env.production.example`). Sauvegarde : `deploy/backup.sh` ; mise à jour : `deploy/update.sh`. Guide pas à pas (VPS Contabo, Ubuntu 24.04) : [docs/deploiement.md](docs/deploiement.md).
+`docker-compose.prod.yml` + `deploy/Caddyfile` : HTTPS automatique (Caddy / Let's Encrypt), interface sur `https://DOMAIN`, API sur `https://DOMAIN/api`, base et API non exposées. Réglages dans `.env.production` (modèle : `.env.production.example`). Sauvegarde : `deploy/backup.sh` ; mise à jour : `deploy/update.sh`, lancée automatiquement par GitHub Actions (`.github/workflows/deploy.yml`) à chaque modification de `main` une fois la CI verte. Guide pas à pas (VPS Contabo, Ubuntu 24.04) : [docs/deploiement.md](docs/deploiement.md).
 
 ## Tests
 

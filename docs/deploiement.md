@@ -41,9 +41,10 @@ Durée : environ **45 minutes** la première fois.
 9. [Premiers pas dans l'application](#9-premiers-pas-dans-lapplication)
 10. [Sauvegardes automatiques](#10-sauvegardes-automatiques)
 11. [Mettre à jour l'application](#11-mettre-à-jour-lapplication)
-12. [Commandes utiles au quotidien](#12-commandes-utiles-au-quotidien)
-13. [Dépannage](#13-dépannage)
-14. [Checklist de sécurité](#14-checklist-de-sécurité)
+12. [Déploiement automatique](#12-déploiement-automatique)
+13. [Commandes utiles au quotidien](#13-commandes-utiles-au-quotidien)
+14. [Dépannage](#14-dépannage)
+15. [Checklist de sécurité](#15-checklist-de-sécurité)
 
 ---
 
@@ -374,6 +375,8 @@ gunzip -c ~/backups/inventory-2026-10-02_0230.sql.gz | \
 
 ## 11. Mettre à jour l'application
 
+> Une fois l'étape 12 en place, cette mise à jour se fait **toute seule** à chaque modification de `main`. La commande ci-dessous reste utile pour mettre à jour à la main.
+
 Après avoir fusionné de nouvelles modifications dans `main` sur GitHub :
 
 **VPS :**
@@ -385,7 +388,7 @@ cd ~/inventory
 
 Le script :
 1. fait une **sauvegarde** de la base ;
-2. récupère le nouveau code (`git pull`) ;
+2. récupère le nouveau code et avance `main`, sans jamais écraser de modification locale ;
 3. reconstruit et redémarre les conteneurs. Les migrations s'appliquent automatiquement au démarrage de l'API ;
 4. nettoie les anciennes images Docker.
 
@@ -404,9 +407,76 @@ Puis, une fois le problème corrigé sur GitHub : `git checkout main && ./deploy
 
 > Si la mise à jour contenait une migration, restaure aussi la sauvegarde faite juste avant (voir l'étape 10).
 
+## 12. Déploiement automatique
+
+Avec cette étape, **chaque modification de `main` part en production toute seule**. Tu n'as plus besoin de te connecter au VPS.
+
+```
+push / fusion sur main ──► CI (compilation + tests) ──► vert ? ──► Deploy ──► SSH ──► VPS : update.sh <commit>
+                                                       rouge ? ──► rien n'est déployé       └─► vérifie que le site répond
+```
+
+- Le workflow **Deploy** (`.github/workflows/deploy.yml`) ne démarre **que si la CI est verte**. Un code qui ne compile pas n'arrive jamais en production.
+- Il déploie **exactement le commit testé**, et les déploiements passent l'un après l'autre, jamais en même temps.
+- À la fin, il vérifie que l'interface et l'API répondent. Sinon, le run passe en rouge et GitHub t'envoie un email.
+- **Sécurité** : GitHub a sa propre clé SSH, qui ne peut **rien faire d'autre** que lancer `update.sh`. Même si quelqu'un la volait, il ne pourrait pas ouvrir de terminal sur le VPS. Le script refuse aussi tout ce qui n'est pas un commit de `main`.
+
+> Fais les points 1 à 5 **avant** de fusionner la Pull Request qui ajoute ce workflow : le tout premier déploiement automatique se lance dès la fusion.
+
+**1. GitHub — vérifier que la CI est verte.** Onglet **Actions** du dépôt → workflow **CI** → le dernier run sur `main` doit avoir une coche verte. Si ce n'est pas le cas, corrige-le d'abord, sinon Deploy ne se lancera jamais.
+
+**2. VPS — créer la clé de déploiement et la limiter à `update.sh` :**
+
+```bash
+ssh-keygen -t ed25519 -N "" -C "github-actions-deploy" -f ~/gh_deploy
+echo "command=\"$HOME/inventory/deploy/update.sh\",restrict $(cat ~/gh_deploy.pub)" >> ~/.ssh/authorized_keys
+cat ~/gh_deploy
+```
+
+La dernière commande affiche la **clé privée**. Copie-la **en entier**, de la ligne `-----BEGIN OPENSSH PRIVATE KEY-----` à la ligne `-----END OPENSSH PRIVATE KEY-----` incluses.
+
+**3. VPS — afficher l'empreinte du serveur** (elle permet à GitHub de vérifier qu'il parle bien à ton VPS) :
+
+```bash
+echo "203.0.113.10 $(cut -d' ' -f1,2 /etc/ssh/ssh_host_ed25519_key.pub)"
+```
+
+**4. GitHub — enregistrer les secrets et les variables.** Dans le dépôt : **Settings → Secrets and variables → Actions**.
+
+Onglet **Secrets** → **New repository secret** :
+
+| Nom | Valeur |
+|---|---|
+| `VPS_SSH_KEY` | la clé privée copiée au point 2 |
+| `VPS_KNOWN_HOSTS` | la ligne affichée au point 3 |
+
+Onglet **Variables** → **New repository variable** :
+
+| Nom | Valeur |
+|---|---|
+| `VPS_HOST` | `203.0.113.10` (l'IP du VPS) |
+| `DOMAIN` | `inventory.mondomaine.com` |
+| `VPS_USER` | `deploy` (facultatif : c'est la valeur par défaut) |
+
+**5. VPS — supprimer la clé privée.** Elle est maintenant dans GitHub et n'a plus rien à faire sur le serveur :
+
+```bash
+rm ~/gh_deploy ~/gh_deploy.pub
+```
+
+**6. Tester.** Une fois la Pull Request fusionnée : onglet **Actions** → **Deploy** → **Run workflow** (branche `main`). Les étapes s'affichent en direct. Le run dure le temps de la reconstruction, en général quelques minutes.
+
+**Au quotidien :**
+
+- Tu fusionnes une Pull Request dans `main`, et c'est tout. Tu suis le déploiement dans l'onglet **Actions**. La page d'accueil du dépôt affiche aussi l'environnement **production** avec la dernière version déployée.
+- **Redéployer** sans changement de code : **Actions → Deploy → Run workflow**.
+- **Revenir en arrière** : sur GitHub, ouvre la Pull Request fautive et clique sur **Revert**, puis fusionne la PR créée. Le retour en arrière se déploie automatiquement, comme n'importe quel changement. Si la version annulée contenait une migration, restaure aussi la sauvegarde faite juste avant (étape 10) : `update.sh` en fait une avant chaque déploiement.
+- **Valider chaque déploiement à la main** (facultatif) : **Settings → Environments → production → Required reviewers**, puis ajoute-toi. GitHub attendra ton clic sur **Approve** avant chaque mise en production.
+- `./deploy/update.sh` reste utilisable à la main sur le VPS, comme à l'étape 11.
+
 ---
 
-## 12. Commandes utiles au quotidien
+## 13. Commandes utiles au quotidien
 
 Avec l'alias `dc` de l'étape 8 (sinon, remplace `dc` par `docker compose -f docker-compose.prod.yml --env-file .env.production`) :
 
@@ -429,7 +499,7 @@ Avec l'alias `dc` de l'étape 8 (sinon, remplace `dc` par `docker compose -f doc
 
 ---
 
-## 13. Dépannage
+## 14. Dépannage
 
 | Symptôme | Cause probable | Solution |
 |---|---|---|
@@ -441,11 +511,14 @@ Avec l'alias `dc` de l'étape 8 (sinon, remplace `dc` par `docker compose -f doc
 | `password authentication failed for user "inventory"` | `POSTGRES_PASSWORD` modifié après le premier démarrage | remettre l'ancienne valeur (voir la copie de `.env.production`) |
 | La devise ou le domaine ne change pas dans l'interface | ces valeurs sont intégrées au moment de la construction | `dc up -d --build frontend` |
 | `Permission denied` en lançant `./deploy/backup.sh` ou `update.sh` | le fichier a perdu son droit d'exécution | `chmod +x ~/inventory/deploy/*.sh` |
+| GitHub Actions : `Permission denied (publickey)` | clé privée mal copiée dans `VPS_SSH_KEY`, ou ligne absente de `authorized_keys` | refaire l'étape 12 (points 2 à 5) |
+| GitHub Actions : `Host key verification failed` | le VPS a été réinstallé, son empreinte a changé | refaire le point 3 de l'étape 12 et mettre à jour `VPS_KNOWN_HOSTS` |
+| Le workflow **Deploy** ne se lance pas après une fusion | la **CI** a échoué : on ne déploie jamais un code cassé | onglet **Actions** → ouvrir le run CI en rouge et corriger |
 | Plus d'accès SSH | mauvaise clé, ou règle de pare-feu | console **VNC** dans le panneau Contabo |
 
 ---
 
-## 14. Checklist de sécurité
+## 15. Checklist de sécurité
 
 - [ ] Connexion SSH par clé uniquement, `root` interdit (étape 3)
 - [ ] Pare-feu actif avec seulement 22, 80 et 443 (étape 4)
@@ -453,4 +526,5 @@ Avec l'alias `dc` de l'étape 8 (sinon, remplace `dc` par `docker compose -f doc
 - [ ] Mot de passe administrateur changé après la première connexion (étape 9)
 - [ ] Un compte par personne, avec le rôle le plus bas suffisant (Paramètres → Utilisateurs)
 - [ ] Sauvegarde nocturne programmée **et** copiée régulièrement hors du serveur (étape 10)
-- [ ] Mises à jour du système une fois par mois (étape 12)
+- [ ] Mises à jour du système une fois par mois (étape 13)
+- [ ] Clé de déploiement GitHub limitée à `update.sh` (`restrict`) et clé privée supprimée du VPS (étape 12)
