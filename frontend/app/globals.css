@@ -1,18 +1,93 @@
 @import "tailwindcss";
 
-:root { color-scheme: light dark; }
-body { @apply bg-zinc-50 text-zinc-900 antialiased dark:bg-zinc-950 dark:text-zinc-100; }
-
-/* chart tokens (validated reference palette: blue, series 1) */
+/*
+ * Inventory design system tokens (claude.ai design system "Inventory").
+ * Light values on :root, dark values under prefers-color-scheme.
+ * Exposed to Tailwind via @theme inline: bg-surface, text-ink-muted, border-line, bg-accent-soft…
+ */
 :root {
-  --series-1: #2a78d6;
-  --chart-grid: #e4e3df;
-  --chart-axis: #6b6a66;
+  color-scheme: light;
+  --bg: #f5f7f6;
+  --surface: #ffffff;
+  --surface-sunken: #eef2f0;
+  --border: #e1e7e4;
+  --border-strong: #8a9692;
+  --ink: #16201c;
+  --ink-muted: #5b6863;
+  --accent: #3451c9;
+  --on-accent: #ffffff;
+  --accent-soft: #eaeefc;
+  --accent-ink: #2a43ab;
+  --success: #1c7a4a;
+  --success-soft: #e5f4ec;
+  --warning: #8a5100;
+  --warning-soft: #fdf1dc;
+  --danger: #c2362b;
+  --danger-soft: #fbe9e7;
+  --elev-card: 0 1px 2px rgba(22, 32, 28, 0.04), 0 4px 16px rgba(22, 32, 28, 0.04);
+  --elev-pop: 0 8px 32px rgba(22, 32, 28, 0.12);
+
+  /* chart tokens */
+  --series-1: var(--accent);
+  --chart-grid: var(--border);
+  --chart-axis: var(--ink-muted);
 }
+
 @media (prefers-color-scheme: dark) {
   :root {
-    --series-1: #3987e5;
-    --chart-grid: #34332f;
-    --chart-axis: #a8a79e;
+    color-scheme: dark;
+    --bg: #0f1312;
+    --surface: #171c1b;
+    --surface-sunken: #121615;
+    --border: #2a3230;
+    --border-strong: #68746f;
+    --ink: #e8eeeb;
+    --ink-muted: #9aa7a2;
+    --accent: #8ea2ff;
+    --on-accent: #10183d;
+    --accent-soft: #1f2647;
+    --accent-ink: #b9c6ff;
+    --success: #5fcf92;
+    --success-soft: #16301f;
+    --warning: #f0b44c;
+    --warning-soft: #3a2a10;
+    --danger: #ff8a80;
+    --danger-soft: #3d1a17;
+    --elev-card: none;
+    --elev-pop: 0 8px 32px rgba(0, 0, 0, 0.5);
   }
+}
+
+@theme inline {
+  --color-bg: var(--bg);
+  --color-surface: var(--surface);
+  --color-sunken: var(--surface-sunken);
+  --color-line: var(--border);
+  --color-line-strong: var(--border-strong);
+  --color-ink: var(--ink);
+  --color-ink-muted: var(--ink-muted);
+  --color-accent: var(--accent);
+  --color-on-accent: var(--on-accent);
+  --color-accent-soft: var(--accent-soft);
+  --color-accent-ink: var(--accent-ink);
+  --color-success: var(--success);
+  --color-success-soft: var(--success-soft);
+  --color-warning: var(--warning);
+  --color-warning-soft: var(--warning-soft);
+  --color-danger: var(--danger);
+  --color-danger-soft: var(--danger-soft);
+  --shadow-card: var(--elev-card);
+  --shadow-pop: var(--elev-pop);
+  --radius-card: 14px;
+  --font-sans: "Instrument Sans", ui-sans-serif, system-ui, sans-serif;
+  --font-mono: "IBM Plex Mono", ui-monospace, SFMono-Regular, Menlo, monospace;
+}
+
+body {
+  @apply bg-bg font-sans text-sm text-ink antialiased;
+}
+
+:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 2px;
 }
