@@ -7,6 +7,7 @@ export interface PlanLine {
   materialId: number;
   name: string;
   unit: string;
+  unitId: number;
   /** quantity needed for one product, in the material's stock unit */
   requiredPerProduct: Prisma.Decimal;
   available: Prisma.Decimal;
@@ -39,6 +40,7 @@ export class PlanningService {
         materialId: l.materialId,
         name: l.material.name,
         unit: l.material.unit.symbol,
+        unitId: l.material.unitId,
         requiredPerProduct: perProduct,
         available,
         possibleProduction: available.div(perProduct).floor(),
@@ -73,7 +75,7 @@ export class PlanningService {
       quantity,
       feasible: lines.every((l) => l.missing!.isZero()),
       materials: lines.map((l) => ({ ...l, sufficient: l.missing!.isZero() })),
-      toBuy: lines.filter((l) => l.missing!.gt(0)).map((l) => ({ materialId: l.materialId, name: l.name, unit: l.unit, quantity: l.missing! })),
+      toBuy: lines.filter((l) => l.missing!.gt(0)).map((l) => ({ materialId: l.materialId, name: l.name, unit: l.unit, unitId: l.unitId, quantity: l.missing! })),
     };
   }
 }

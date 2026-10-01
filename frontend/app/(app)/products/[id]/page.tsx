@@ -106,7 +106,17 @@ export default function ProductPage() {
                 </Table>
                 {check.feasible
                   ? <Button onClick={produce} disabled={busy}>Confirmer la production de {qty}</Button>
-                  : <p className="text-sm text-red-600">Production impossible avec le stock actuel.</p>}
+                  : (
+                    <div className="space-y-2">
+                      <p className="text-sm text-red-600">Production impossible avec le stock actuel.</p>
+                      {canWrite(user, 'MANAGER') && (
+                        <Link className="inline-block rounded-md border border-zinc-300 px-3 py-1.5 text-sm dark:border-zinc-700"
+                          href={`/purchases/new?lines=${check.toBuy.map((b: any) => `${b.materialId}:${Number(b.quantity)}:${b.unitId}`).join(',')}`}>
+                          Créer une commande pour les matières manquantes
+                        </Link>
+                      )}
+                    </div>
+                  )}
               </>
             )}
           </div>

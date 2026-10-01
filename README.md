@@ -12,9 +12,9 @@ mouvements de stock et production (voir les documents de conception, MCD et MLD)
 | 3 — Nomenclature | BOM via `/products/:id/bom` | ✅ backend |
 | 4 — Stock | Stocks matières/produits, mouvements, seuils et alertes | ✅ backend |
 | 5 — Production | Capacité, vérification, besoins, production transactionnelle | ✅ backend |
-| 6 — Approvisionnement | « À acheter » via `material-requirements` ; fournisseurs / commandes | partiel |
+| 6 — Approvisionnement | Fournisseurs, commandes d'achat (brouillon → commandée → reçue / annulée), réception = entrée en stock, commande pré-remplie depuis les manquants d'un produit | ✅ |
 | 7 — Dashboard, rapports | Dashboard et alertes faits ; rapports à faire | partiel |
-| Frontend (Next.js + Tailwind) | Connexion, dashboard, produits (capacité, vérification, production), matières, stocks et mouvements, historique de production, création/édition de produits (éditeur de nomenclature) et de matières (caractéristiques), paramètres (unités, caractéristiques, utilisateurs) | ✅ première version |
+| Frontend (Next.js + Tailwind) | Connexion, dashboard, produits (capacité, vérification, production), matières, stocks et mouvements, historique de production, création/édition de produits (éditeur de nomenclature) et de matières (caractéristiques), paramètres (unités, caractéristiques, fournisseurs, utilisateurs), achats | ✅ première version |
 
 ## Démarrage
 
@@ -62,3 +62,8 @@ npm run test:e2e    # API + PostgreSQL — DATABASE_URL doit viser une base jeta
 - `POST /production` (entier > 0) : lit la nomenclature, vérifie, retire les matières, ajoute les produits finis, écrit les mouvements (`reference = PROD-00042`) et la production dans **une seule transaction** ; en cas de manque, 409 avec la liste des matières manquantes et rien n'est modifié.
 - `GET /products/:id/production-capacity` : production maximale et matière limitante. `POST /products/:id/check-production` et `/material-requirements` (`{quantity}`) : faisabilité, manquants et quantités à acheter.
 - `GET /inventory/alerts` : `LOW_STOCK` (≤ seuil minimum) et `OUT_OF_STOCK`. Les produits finis sont comptés en `PCS` (l'unité `PCS` doit exister, ce que fait le seed).
+
+### Achats
+
+- Une commande suit `DRAFT → ORDERED → RECEIVED` (ou `CANCELLED`). Seul un brouillon est modifiable. La réception crée une entrée de stock par ligne (référence `PO-00001`), dans l'unité du stock, en une transaction ; une double réception ne peut pas ajouter le stock deux fois.
+- Sur la fiche d'un produit, si la production est impossible, un bouton crée un brouillon de commande pré-rempli avec les matières manquantes.

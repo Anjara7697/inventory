@@ -11,6 +11,7 @@ import { MaterialsModule } from './materials/materials.module';
 import { PrismaModule } from './prisma/prisma.module';
 import { ProductsModule } from './products/products.module';
 import { ProductionModule } from './production/production.module';
+import { PurchasingModule } from './purchasing/purchasing.module';
 import { UnitsModule } from './units/units.module';
 import { UsersModule } from './users/users.module';
 
@@ -26,6 +27,7 @@ import { UsersModule } from './users/users.module';
     ProductsModule,
     InventoryModule,
     ProductionModule,
+    PurchasingModule,
   ],
   providers: [
     { provide: APP_GUARD, useClass: JwtAuthGuard },

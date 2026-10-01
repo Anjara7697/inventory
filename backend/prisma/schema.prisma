@@ -29,6 +29,13 @@ enum StockMovementType {
   ADJUSTMENT
 }
 
+enum PurchaseOrderStatus {
+  DRAFT
+  ORDERED
+  RECEIVED
+  CANCELLED
+}
+
 enum ProductionStatus {
   PENDING
   IN_PROGRESS
@@ -37,16 +44,17 @@ enum ProductionStatus {
 }
 
 model User {
-  id           Int      @id @default(autoincrement())
-  firstName    String   @map("first_name") @db.VarChar(100)
-  lastName     String   @map("last_name") @db.VarChar(100)
-  email        String   @unique @db.VarChar(255)
-  passwordHash String   @map("password_hash") @db.VarChar(255)
-  role         UserRole @default(OPERATOR)
-  refreshTokenHash String? @map("refresh_token_hash") @db.VarChar(255)
+  id               Int      @id @default(autoincrement())
+  firstName        String   @map("first_name") @db.VarChar(100)
+  lastName         String   @map("last_name") @db.VarChar(100)
+  email            String   @unique @db.VarChar(255)
+  passwordHash     String   @map("password_hash") @db.VarChar(255)
+  role             UserRole @default(OPERATOR)
+  refreshTokenHash String?  @map("refresh_token_hash") @db.VarChar(255)
 
   productions    Production[]
   stockMovements StockMovement[]
+  purchaseOrders PurchaseOrder[]
 
   createdAt DateTime @default(now()) @map("created_at")
   updatedAt DateTime @updatedAt @map("updated_at")
@@ -86,8 +94,9 @@ model Material {
   stock           MaterialStock?
   stockMovements  StockMovement[]
 
-  createdAt DateTime @default(now()) @map("created_at")
-  updatedAt DateTime @updatedAt @map("updated_at")
+  createdAt          DateTime            @default(now()) @map("created_at")
+  updatedAt          DateTime            @updatedAt @map("updated_at")
+  purchaseOrderLines PurchaseOrderLine[]
 
   @@index([unitId])
   @@map("materials")
@@ -110,10 +119,11 @@ model Unit {
   categoryId       Int     @map("category_id")
   conversionFactor Decimal @map("conversion_factor") @db.Decimal(20, 8)
 
-  category        UnitCategory      @relation(fields: [categoryId], references: [id], onDelete: Restrict)
-  materials       Material[]
+  category         UnitCategory        @relation(fields: [categoryId], references: [id], onDelete: Restrict)
+  materials        Material[]
   productMaterials ProductMaterial[]
-  stockMovements  StockMovement[]
+  stockMovements   StockMovement[]
+  purchaseLines    PurchaseOrderLine[]
 
   createdAt DateTime @default(now()) @map("created_at")
 
@@ -221,4 +231,53 @@ model Production {
 
   @@index([productId])
   @@map("productions")
+}
+
+model Supplier {
+  id      Int     @id @default(autoincrement())
+  name    String  @db.VarChar(150)
+  contact String? @db.VarChar(255)
+  email   String? @db.VarChar(255)
+  phone   String? @db.VarChar(50)
+  active  Boolean @default(true)
+
+  orders PurchaseOrder[]
+
+  createdAt DateTime @default(now()) @map("created_at")
+
+  @@map("suppliers")
+}
+
+model PurchaseOrder {
+  id         Int                 @id @default(autoincrement())
+  supplierId Int                 @map("supplier_id")
+  status     PurchaseOrderStatus @default(DRAFT)
+  notes      String?             @db.VarChar(500)
+  createdBy  Int                 @map("created_by")
+  createdAt  DateTime            @default(now()) @map("created_at")
+  orderedAt  DateTime?           @map("ordered_at")
+  receivedAt DateTime?           @map("received_at")
+
+  supplier Supplier            @relation(fields: [supplierId], references: [id], onDelete: Restrict)
+  user     User                @relation(fields: [createdBy], references: [id], onDelete: Restrict)
+  lines    PurchaseOrderLine[]
+
+  @@index([supplierId])
+  @@index([status])
+  @@map("purchase_orders")
+}
+
+model PurchaseOrderLine {
+  id         Int     @id @default(autoincrement())
+  orderId    Int     @map("order_id")
+  materialId Int     @map("material_id")
+  quantity   Decimal @db.Decimal(20, 8)
+  unitId     Int     @map("unit_id")
+
+  order    PurchaseOrder @relation(fields: [orderId], references: [id], onDelete: Cascade)
+  material Material      @relation(fields: [materialId], references: [id], onDelete: Restrict)
+  unit     Unit          @relation(fields: [unitId], references: [id], onDelete: Restrict)
+
+  @@unique([orderId, materialId])
+  @@map("purchase_order_lines")
 }

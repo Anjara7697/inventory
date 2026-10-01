@@ -6,7 +6,7 @@ import { SessionUser, api, clearSession, getUser } from '@/lib/api';
 
 const nav = [
   ['/', 'Dashboard'], ['/products', 'Produits'], ['/materials', 'Matières'],
-  ['/stock', 'Stocks'], ['/production', 'Production'], ['/settings', 'Paramètres'],
+  ['/stock', 'Stocks'], ['/production', 'Production'], ['/purchases', 'Achats'], ['/settings', 'Paramètres'],
 ] as const;
 
 export function Shell({ children }: { children: ReactNode }) {

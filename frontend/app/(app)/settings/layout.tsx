@@ -7,7 +7,7 @@ import { getUser } from '@/lib/api';
 export default function SettingsLayout({ children }: { children: ReactNode }) {
   const path = usePathname();
   const isAdmin = getUser()?.role === 'ADMIN';
-  const tabs = [['/settings/units', 'Unités'], ['/settings/characteristics', 'Caractéristiques'], ...(isAdmin ? [['/settings/users', 'Utilisateurs']] : [])];
+  const tabs = [['/settings/units', 'Unités'], ['/settings/characteristics', 'Caractéristiques'], ['/settings/suppliers', 'Fournisseurs'], ...(isAdmin ? [['/settings/users', 'Utilisateurs']] : [])];
   return (
     <>
       <h1 className="text-xl font-semibold">Paramètres</h1>

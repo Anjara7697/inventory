@@ -50,6 +50,9 @@ async function main() {
 
 /** Example from the design doc: Pantalon Jean = 2.5 m tissu + 1 fermeture + 2 boutons. */
 async function demo() {
+  if (!(await prisma.supplier.count())) {
+    await prisma.supplier.create({ data: { name: 'Textiles & Mercerie SA', contact: 'Service commercial', email: 'contact@textiles.example' } });
+  }
   const unit = (code: string) => prisma.unit.findUniqueOrThrow({ where: { code } });
   const [m, pcs] = [await unit('M'), await unit('PCS')];
   const mk = (sku: string, name: string, unitId: number, qty: number, min: number) =>
