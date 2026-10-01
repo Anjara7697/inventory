@@ -13,9 +13,8 @@ mouvements de stock et production (voir les documents de conception, MCD et MLD)
 | 4 — Stock | Stocks matières/produits, mouvements, seuils et alertes | ✅ backend |
 | 5 — Production | Capacité, vérification, besoins, production transactionnelle | ✅ backend |
 | 6 — Approvisionnement | « À acheter » via `material-requirements` ; fournisseurs / commandes | partiel |
-| 7 — Dashboard, rapports | | à faire |
-
-Le frontend Next.js n'est pas encore initialisé.
+| 7 — Dashboard, rapports | Dashboard et alertes faits ; rapports à faire | partiel |
+| Frontend (Next.js + Tailwind) | Connexion, dashboard, produits (capacité, vérification, production), matières, stocks et mouvements, historique de production | ✅ première version |
 
 ## Démarrage
 
@@ -31,7 +30,15 @@ npm run start:dev                   # http://localhost:3001 — Swagger : /docs
 
 Compte seed : `admin@inventory.local` / `ChangeMe123!` (surchargeable via `SEED_ADMIN_EMAIL` / `SEED_ADMIN_PASSWORD`). À changer hors développement.
 
-Tout en Docker : `docker compose up --build`.
+Frontend :
+
+```bash
+cd frontend
+cp .env.example .env.local   # NEXT_PUBLIC_API_URL
+npm install && npm run dev   # http://localhost:3000
+```
+
+Tout en Docker (API + base) : `docker compose up --build`.
 
 ## Tests
 
