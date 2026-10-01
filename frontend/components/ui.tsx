@@ -1,25 +1,51 @@
-import { ButtonHTMLAttributes, InputHTMLAttributes, ReactNode, SelectHTMLAttributes } from 'react';
+import Link from 'next/link';
+import { ButtonHTMLAttributes, InputHTMLAttributes, ReactNode, SelectHTMLAttributes, TextareaHTMLAttributes } from 'react';
 
 export const cx = (...c: (string | false | null | undefined)[]) => c.filter(Boolean).join(' ');
 
-type Variant = 'primary' | 'secondary' | 'ghost' | 'danger';
-export const buttonClass = (variant: Variant = 'primary', size: 'md' | 'sm' = 'md') => cx(
+type Variant = 'primary' | 'secondary' | 'ghost' | 'danger' | 'ghost-accent' | 'ghost-danger';
+type Size = 'md' | 'sm' | 'icon' | 'icon-lg';
+export const buttonClass = (variant: Variant = 'primary', size: Size = 'md') => cx(
   'inline-flex items-center justify-center gap-2 whitespace-nowrap rounded-lg border font-medium transition-colors disabled:cursor-not-allowed disabled:opacity-50',
-  size === 'md' ? 'h-9 px-3.5 text-sm' : 'h-8 px-2.5 text-[13px]',
+  size === 'md' && 'h-9 px-3.5 text-sm', size === 'sm' && 'h-8 px-2.5 text-[13px]',
+  size === 'icon' && 'h-9 w-9 text-sm', size === 'icon-lg' && 'h-11 w-11 text-sm',
   variant === 'primary' && 'border-transparent bg-accent text-on-accent hover:brightness-110',
   variant === 'secondary' && 'border-line-strong bg-surface text-ink hover:bg-sunken',
   variant === 'ghost' && 'border-transparent bg-transparent text-ink-muted hover:bg-sunken hover:text-ink',
   variant === 'danger' && 'border-transparent bg-danger-soft text-danger hover:brightness-95',
+  variant === 'ghost-accent' && 'border-transparent bg-transparent text-accent hover:bg-accent-soft',
+  variant === 'ghost-danger' && 'border-transparent bg-transparent text-danger hover:bg-danger-soft',
 );
 
 /** Primary = the one main action of a screen; secondary for other actions; ghost for cancel/pager; danger for deletions. */
-export function Button({ variant = 'primary', size = 'md', className, ...p }: ButtonHTMLAttributes<HTMLButtonElement> & { variant?: Variant; size?: 'md' | 'sm' }) {
+export function Button({ variant = 'primary', size = 'md', className, ...p }: ButtonHTMLAttributes<HTMLButtonElement> & { variant?: Variant; size?: Size }) {
   return <button {...p} className={cx(buttonClass(variant, size), className)} />;
 }
 
 const field = 'h-[38px] w-full rounded-lg border border-line-strong bg-surface px-3 text-sm text-ink placeholder:text-ink-muted focus:border-accent focus:outline-2 focus:outline-offset-1 focus:outline-accent aria-[invalid=true]:border-danger';
 export const Input = (p: InputHTMLAttributes<HTMLInputElement>) => <input {...p} className={cx(field, p.type === 'checkbox' && 'h-4 w-4', p.className)} />;
 export const Select = (p: SelectHTMLAttributes<HTMLSelectElement>) => <select {...p} className={cx(field, p.className)} />;
+export const Textarea = (p: TextareaHTMLAttributes<HTMLTextAreaElement>) => <textarea {...p} className={cx(field, 'h-auto py-2.5 leading-[22px]', p.className)} />;
+
+/** Checkbox with a label and an optional explanation, laid out as a setting row. */
+export const Toggle = ({ label, hint, ...p }: InputHTMLAttributes<HTMLInputElement> & { label: string; hint?: string }) => (
+  <label className="flex items-center justify-between gap-3">
+    <span><span className="block text-[13px] font-medium">{label}</span>{hint && <span className="block text-xs text-ink-muted">{hint}</span>}</span>
+    <input type="checkbox" {...p} className="h-[18px] w-[18px] accent-accent" />
+  </label>
+);
+
+/** "Produits / Pantalon Jean": every item but the last is a link. */
+export const Breadcrumb = ({ items }: { items: [string, string?][] }) => (
+  <nav aria-label="Fil d'Ariane" className="-mb-3 flex flex-wrap gap-1.5 text-[13px] text-ink-muted">
+    {items.map(([label, href], i) => (
+      <span key={i} className="flex gap-1.5">
+        {i > 0 && <span aria-hidden>/</span>}
+        {href ? <Link href={href} className="hover:text-accent">{label}</Link> : <span className="text-ink">{label}</span>}
+      </span>
+    ))}
+  </nav>
+);
 
 export function Field({ label, hint, children }: { label: string; hint?: ReactNode; children: ReactNode }) {
   return (
@@ -32,8 +58,8 @@ export function Field({ label, hint, children }: { label: string; hint?: ReactNo
 }
 
 /** Surface card. `action` sits at the right of the title (a link such as "Voir tout"). */
-export const Card = ({ title, subtitle, action, children, className }: { title?: string; subtitle?: string; action?: ReactNode; children: ReactNode; className?: string }) => (
-  <section className={cx('min-w-0 rounded-[14px] border border-line bg-surface p-4 shadow-card sm:p-6', className)}>
+export const Card = ({ title, subtitle, action, flush, children, className }: { title?: string; subtitle?: string; action?: ReactNode; flush?: boolean; children: ReactNode; className?: string }) => (
+  <section className={cx('min-w-0 rounded-[14px] border border-line bg-surface shadow-card', flush ? 'p-3' : 'p-4 sm:p-6', className)}>
     {(title || action) && (
       <div className="mb-4 flex items-start justify-between gap-3">
         <div>
@@ -48,21 +74,24 @@ export const Card = ({ title, subtitle, action, children, className }: { title?:
 );
 
 /** Page title with optional overline (date, breadcrumb) and actions on the right. */
-export const PageHeader = ({ title, overline, actions }: { title: string; overline?: ReactNode; actions?: ReactNode }) => (
+export const PageHeader = ({ title, overline, badge, meta, actions }: { title: string; overline?: ReactNode; badge?: ReactNode; meta?: ReactNode; actions?: ReactNode }) => (
   <header className="flex flex-wrap items-end justify-between gap-4">
-    <div className="grid gap-1">
+    <div className="grid max-w-2xl gap-1.5">
       {overline && <span className="text-[13px] text-ink-muted">{overline}</span>}
-      <h1 className="text-[26px] leading-8 font-semibold tracking-tight text-balance">{title}</h1>
+      <div className="flex flex-wrap items-center gap-2.5">
+        <h1 className="text-[26px] leading-8 font-semibold tracking-tight text-balance">{title}</h1>{badge}
+      </div>
+      {meta && <div className="flex flex-wrap items-center gap-2 text-ink-muted">{meta}</div>}
     </div>
     {actions && <div className="flex flex-wrap gap-2">{actions}</div>}
   </header>
 );
 
 /** KPI card: label in caps, figure, one line of context. Use 3–4 in a row. */
-export const Stat = ({ label, value, meta }: { label: string; value: ReactNode; meta?: ReactNode }) => (
+export const Stat = ({ label, value, unit, meta }: { label: string; value: ReactNode; unit?: string; meta?: ReactNode }) => (
   <div className="flex min-w-0 flex-col gap-2 rounded-[14px] border border-line bg-surface px-4 py-4 shadow-card sm:px-6 sm:py-5">
     <span className="text-xs font-medium tracking-wider text-ink-muted uppercase">{label}</span>
-    <span className="text-2xl leading-8 font-medium tabular-nums sm:text-[30px] sm:leading-9">{value}</span>
+    <span className="text-2xl leading-8 font-medium tabular-nums sm:text-[30px] sm:leading-9">{value}{unit && <span className="ml-1.5 text-base text-ink-muted">{unit}</span>}</span>
     {meta && <span className="text-[13px] text-ink-muted">{meta}</span>}
   </div>
 );

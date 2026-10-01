@@ -1,7 +1,7 @@
 'use client';
 import { useParams } from 'next/navigation';
 import { ProductForm } from '@/components/ProductForm';
-import { ErrorText } from '@/components/ui';
+import { Breadcrumb, ErrorText, Loading, PageHeader } from '@/components/ui';
 import { useApi } from '@/lib/hooks';
 
 export default function EditProduct() {
@@ -9,9 +9,10 @@ export default function EditProduct() {
   const { data, error } = useApi<any>(`/products/${id}`);
   return (
     <>
-      <h1 className="text-xl font-semibold">Modifier le produit</h1>
+      <Breadcrumb items={[['Produits', '/products'], [data?.name ?? '…', `/products/${id}`], ['Modifier']]} />
+      <PageHeader title="Modifier le produit" />
       <ErrorText>{error}</ErrorText>
-      {data && <ProductForm product={data} />}
+      {data ? <ProductForm product={data} /> : !error && <Loading />}
     </>
   );
 }

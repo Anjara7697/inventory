@@ -1,6 +1,13 @@
 'use client';
 import { ProductForm } from '@/components/ProductForm';
+import { Breadcrumb, PageHeader } from '@/components/ui';
 
 export default function NewProduct() {
-  return (<><h1 className="text-xl font-semibold">Nouveau produit</h1><ProductForm /></>);
+  return (
+    <>
+      <Breadcrumb items={[['Produits', '/products'], ['Nouveau produit']]} />
+      <PageHeader title="Nouveau produit" />
+      <ProductForm />
+    </>
+  );
 }

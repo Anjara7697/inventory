@@ -88,7 +88,7 @@ export function Shell({ children }: { children: ReactNode }) {
           <span className="block truncate font-medium">{user.firstName} {user.lastName}</span>
           <span className="block text-xs text-ink-muted">{ROLE_LABEL[user.role]}</span>
         </Link>
-        <button onClick={logout} aria-label="Se déconnecter" title="Se déconnecter" className={buttonClass('ghost', 'sm')}><IconLogout /></button>
+        <button onClick={logout} aria-label="Se déconnecter" title="Se déconnecter" className={buttonClass('ghost', 'icon')}><IconLogout /></button>
       </div>
     </>
   );
@@ -103,7 +103,7 @@ export function Shell({ children }: { children: ReactNode }) {
         <div className="fixed inset-0 z-40 md:hidden">
           <button aria-label="Fermer le menu" className="absolute inset-0 bg-black/30" onClick={() => setMenuOpen(false)} />
           <aside className="absolute inset-y-0 left-0 flex w-72 max-w-[85vw] flex-col gap-7 bg-surface px-4 py-6 shadow-pop">
-            <button onClick={() => setMenuOpen(false)} aria-label="Fermer le menu" className={cx(buttonClass('ghost', 'sm'), 'absolute top-5 right-3')}><IconClose /></button>
+            <button onClick={() => setMenuOpen(false)} aria-label="Fermer le menu" className={cx(buttonClass('ghost', 'icon'), 'absolute top-5 right-3')}><IconClose /></button>
             {sidebar}
           </aside>
         </div>
@@ -113,7 +113,7 @@ export function Shell({ children }: { children: ReactNode }) {
         {/* Mobile top bar */}
         <div className="sticky top-0 z-30 flex items-center justify-between border-b border-line bg-surface px-4 py-2.5 md:hidden">
           <Brand />
-          <button onClick={() => setMenuOpen(true)} aria-label="Ouvrir le menu" className={cx(buttonClass('secondary'), 'h-11 w-11 px-0')}><IconMenu size={20} /></button>
+          <button onClick={() => setMenuOpen(true)} aria-label="Ouvrir le menu" className={buttonClass('secondary', 'icon-lg')}><IconMenu size={20} /></button>
         </div>
 
         <main className="mx-auto flex w-full max-w-[1240px] min-w-0 flex-col gap-6 px-4 pt-6 pb-16 md:px-12 md:pt-10">
