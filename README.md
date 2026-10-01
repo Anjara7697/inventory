@@ -13,7 +13,7 @@ mouvements de stock et production (voir les documents de conception, MCD et MLD)
 | 4 — Stock | Stocks matières/produits, mouvements, seuils et alertes | ✅ backend |
 | 5 — Production | Capacité, vérification, besoins, production transactionnelle | ✅ backend |
 | 6 — Approvisionnement | Fournisseurs, commandes d'achat (brouillon → commandée → reçue / annulée), réception = entrée en stock, commande pré-remplie depuis les manquants d'un produit | ✅ |
-| 7 — Dashboard, rapports | Dashboard et alertes faits ; rapports à faire | partiel |
+| 7 — Dashboard, rapports | Dashboard, alertes (matières et produits finis), coûts et valeur du stock, rapports avec graphiques | ✅ |
 | Frontend (Next.js + Tailwind) | Connexion, dashboard, produits (capacité, vérification, production), matières, stocks et mouvements, historique de production, création/édition de produits (éditeur de nomenclature) et de matières (caractéristiques), paramètres (unités, caractéristiques, fournisseurs, utilisateurs), achats | ✅ première version |
 
 ## Démarrage
@@ -91,3 +91,11 @@ Unités, catégories d'unités, caractéristiques et fournisseurs sont modifiabl
 - `GET/PATCH /auth/me` et `POST /auth/change-password` : chacun gère son nom et son mot de passe (page « Mon profil »). Un changement de mot de passe déconnecte les autres sessions.
 - Un compte n'a qu'**une session rafraîchissable à la fois** : se connecter sur un second appareil invalide le renouvellement automatique du premier (son jeton d'accès reste valable 15 minutes).
 - Les pages réservées (création/édition de produits, matières, commandes ; gestion des utilisateurs) affichent « Accès refusé » aux rôles non autorisés. L'API applique les mêmes règles.
+
+### Coûts, valeur du stock et rapports (managers)
+
+- Chaque matière a un **coût unitaire** (par unité de stock). Une ligne de commande peut porter un **prix** (par unité de la ligne, convertie vers l'unité de stock) : à la réception, le coût de la matière devient la **moyenne pondérée** `(stock × coût actuel + reçu × prix) / (stock + reçu)`. Une ligne sans prix ne touche pas au coût. Le coût reste modifiable à la main.
+- `GET /reports/stock-value` : matières = quantité × coût moyen ; produits finis = quantité × coût de la nomenclature aux coûts actuels (une **estimation**, pas une valeur comptable).
+- `GET /reports/production-monthly?months=12`, `/reports/top-materials`, `/reports/top-products` (filtres `from`/`to`) : les productions annulées sont exclues, les annulations sont déduites de la consommation.
+- Un produit fini peut avoir un seuil minimum (`PATCH /inventory/products/:id/threshold`) et apparaît alors dans les alertes.
+- La devise s'affiche selon `NEXT_PUBLIC_CURRENCY` dans `frontend/.env.local` (code ISO : `EUR`, `USD`, `MGA`…). Le montant n'est pas converti, seulement formaté.

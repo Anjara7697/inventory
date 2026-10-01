@@ -2,3 +2,17 @@
 
 :root { color-scheme: light dark; }
 body { @apply bg-zinc-50 text-zinc-900 antialiased dark:bg-zinc-950 dark:text-zinc-100; }
+
+/* chart tokens (validated reference palette: blue, series 1) */
+:root {
+  --series-1: #2a78d6;
+  --chart-grid: #e4e3df;
+  --chart-axis: #6b6a66;
+}
+@media (prefers-color-scheme: dark) {
+  :root {
+    --series-1: #3987e5;
+    --chart-grid: #34332f;
+    --chart-axis: #a8a79e;
+  }
+}

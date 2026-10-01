@@ -5,7 +5,7 @@ import { Button, Card, ErrorText, Field, Input, Select } from '@/components/ui';
 import { api } from '@/lib/api';
 import { useApi } from '@/lib/hooks';
 
-interface Line { materialId: string; quantity: string; unitId: string }
+interface Line { materialId: string; quantity: string; unitId: string; unitPrice: string }
 
 /** `order` = existing DRAFT to edit. Otherwise lines can be pre-filled via ?lines=materialId:qty:unitId,… */
 export function PurchaseForm({ order }: { order?: any }) {
@@ -15,10 +15,10 @@ export function PurchaseForm({ order }: { order?: any }) {
   const materials = useApi<any[]>('/materials');
   const units = useApi<any[]>('/units');
   const [lines, setLines] = useState<Line[]>(() => {
-    if (order) return order.lines.map((l: any) => ({ materialId: String(l.materialId), quantity: String(Number(l.quantity)), unitId: String(l.unitId) }));
+    if (order) return order.lines.map((l: any) => ({ materialId: String(l.materialId), quantity: String(Number(l.quantity)), unitId: String(l.unitId), unitPrice: l.unitPrice == null ? '' : String(Number(l.unitPrice)) }));
     return (params.get('lines') ?? '').split(',').filter(Boolean).map((s) => {
       const [materialId, quantity, unitId] = s.split(':');
-      return { materialId, quantity, unitId };
+      return { materialId, quantity, unitId, unitPrice: '' };
     });
   });
   const [error, setError] = useState<string>();
@@ -33,7 +33,7 @@ export function PurchaseForm({ order }: { order?: any }) {
     const f = new FormData(e.currentTarget);
     const body = {
       supplierId: Number(f.get('supplierId')), notes: (f.get('notes') as string) || undefined,
-      lines: lines.map((l) => ({ materialId: Number(l.materialId), quantity: Number(l.quantity), unitId: Number(l.unitId) })),
+      lines: lines.map((l) => ({ materialId: Number(l.materialId), quantity: Number(l.quantity), unitId: Number(l.unitId), unitPrice: l.unitPrice === '' ? undefined : Number(l.unitPrice) })),
     };
     setBusy(true); setError(undefined);
     try {
@@ -58,7 +58,7 @@ export function PurchaseForm({ order }: { order?: any }) {
       <Card title="Matières à commander">
         <div className="space-y-2">
           {lines.map((l, i) => (
-            <div key={i} className="grid grid-cols-[1fr_7rem_6rem_auto] items-end gap-2">
+            <div key={i} className="grid grid-cols-[1fr_6rem_5rem_7rem_auto] items-end gap-2">
               <Select value={l.materialId} required onChange={(e) => patch(i, { materialId: e.target.value, unitId: String(mat(e.target.value)?.unitId ?? '') })}>
                 <option value="" disabled>Choisir…</option>
                 {materials.data?.map((m) => <option key={m.id} value={m.id} disabled={lines.some((o, k) => k !== i && o.materialId === String(m.id))}>{m.name}</option>)}
@@ -67,10 +67,11 @@ export function PurchaseForm({ order }: { order?: any }) {
               <Select value={l.unitId} required onChange={(e) => patch(i, { unitId: e.target.value })}>
                 {unitsFor(l.materialId).map((u) => <option key={u.id} value={u.id}>{u.symbol}</option>)}
               </Select>
+              <Input type="number" step="any" min="0" placeholder="Prix / unité" title="Prix par unité (optionnel) : met à jour le coût moyen à la réception" value={l.unitPrice} onChange={(e) => patch(i, { unitPrice: e.target.value })} />
               <Button type="button" variant="ghost" onClick={() => setLines((ls) => ls.filter((_, k) => k !== i))} aria-label="Retirer">✕</Button>
             </div>
           ))}
-          <Button type="button" variant="ghost" onClick={() => setLines((ls) => [...ls, { materialId: '', quantity: '', unitId: '' }])}>+ Ajouter une matière</Button>
+          <Button type="button" variant="ghost" onClick={() => setLines((ls) => [...ls, { materialId: '', quantity: '', unitId: '', unitPrice: '' }])}>+ Ajouter une matière</Button>
         </div>
       </Card>
       <ErrorText>{error}</ErrorText>

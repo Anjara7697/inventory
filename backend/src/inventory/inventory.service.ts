@@ -38,19 +38,27 @@ export class InventoryService {
     });
   }
 
-  /** LOW_STOCK when 0 < qty <= minimum, OUT_OF_STOCK when qty = 0 (materials only). */
+  /**
+   * LOW_STOCK when 0 < qty <= minimum, OUT_OF_STOCK when qty = 0.
+   * Materials with no threshold only alert when empty; products only alert when a threshold is set.
+   */
   async alerts() {
-    const stocks = await this.materialStocks();
-    return stocks
-      .filter((s) => s.quantity.lte(s.minimumQuantity) && (s.minimumQuantity.gt(0) || s.quantity.isZero()))
-      .map((s) => ({
-        type: s.quantity.isZero() ? ('OUT_OF_STOCK' as const) : ('LOW_STOCK' as const),
-        materialId: s.materialId,
-        name: s.material.name,
-        quantity: s.quantity,
-        minimumQuantity: s.minimumQuantity,
-        unit: s.material.unit.symbol,
-      }));
+    const [materials, products] = await Promise.all([this.materialStocks(), this.productStocks()]);
+    const type = (qty: Prisma.Decimal) => (qty.isZero() ? ('OUT_OF_STOCK' as const) : ('LOW_STOCK' as const));
+    return [
+      ...materials
+        .filter((s) => s.quantity.lte(s.minimumQuantity) && (s.minimumQuantity.gt(0) || s.quantity.isZero()))
+        .map((s) => ({
+          kind: 'material' as const, type: type(s.quantity), materialId: s.materialId as number | null, productId: null as number | null,
+          name: s.material.name, quantity: s.quantity, minimumQuantity: s.minimumQuantity, unit: s.material.unit.symbol,
+        })),
+      ...products
+        .filter((s) => s.minimumQuantity.gt(0) && s.quantity.lte(s.minimumQuantity))
+        .map((s) => ({
+          kind: 'product' as const, type: type(s.quantity), materialId: null as number | null, productId: s.productId as number | null,
+          name: s.product.name, quantity: s.quantity, minimumQuantity: s.minimumQuantity, unit: 'pcs',
+        })),
+    ];
   }
 
   private movementWhere(f: MovementFilter): Prisma.StockMovementWhereInput {
@@ -83,6 +91,13 @@ export class InventoryService {
       throw new BadRequestException('Invalid thresholds');
     }
     return this.prisma.materialStock.update({ where: { materialId }, data: { minimumQuantity: min, maximumQuantity: max } });
+  }
+
+  async updateProductThreshold(productId: number, min: number) {
+    if (min < 0) throw new BadRequestException('Invalid threshold');
+    const s = await this.prisma.productStock.findUnique({ where: { productId } });
+    if (!s) throw new NotFoundException('Product stock not found');
+    return this.prisma.productStock.update({ where: { productId }, data: { minimumQuantity: min } });
   }
 
   // ---- manual movements ----

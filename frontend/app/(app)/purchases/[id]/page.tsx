@@ -4,7 +4,7 @@ import { useParams } from 'next/navigation';
 import { useState } from 'react';
 import { canWrite } from '@/components/Shell';
 import { Button, Card, ErrorText, Table } from '@/components/ui';
-import { api, getUser, num } from '@/lib/api';
+import { api, getUser, money, num } from '@/lib/api';
 import { useApi } from '@/lib/hooks';
 import { StatusBadge, ref } from '../status';
 
@@ -38,11 +38,14 @@ export default function PurchasePage() {
       </p>
       {o.notes && <p className="text-sm">{o.notes}</p>}
       <Card title="Lignes">
-        <Table head={['Matière', 'SKU', 'Quantité']}>
+        <Table head={['Matière', 'SKU', 'Quantité', 'Prix unitaire', 'Montant']}>
           {o.lines.map((l: any) => (
-            <tr key={l.id}><td>{l.material.name}</td><td className="font-mono text-xs">{l.material.sku}</td><td>{num(l.quantity)} {l.unit.symbol}</td></tr>
+            <tr key={l.id}><td>{l.material.name}</td><td className="font-mono text-xs">{l.material.sku}</td><td>{num(l.quantity)} {l.unit.symbol}</td><td>{l.unitPrice == null ? '—' : `${money(l.unitPrice)} / ${l.unit.symbol}`}</td><td>{l.unitPrice == null ? '—' : money(Number(l.unitPrice) * Number(l.quantity))}</td></tr>
           ))}
         </Table>
+        {o.lines.some((l: any) => l.unitPrice != null) && (
+          <p className="mt-2 text-right text-sm font-medium">Total : {money(o.lines.reduce((t: number, l: any) => t + (l.unitPrice == null ? 0 : Number(l.unitPrice) * Number(l.quantity)), 0))}</p>
+        )}
       </Card>
       <ErrorText>{error}</ErrorText>
       <div className="flex flex-wrap gap-2">

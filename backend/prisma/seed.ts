@@ -55,14 +55,14 @@ async function demo() {
   }
   const unit = (code: string) => prisma.unit.findUniqueOrThrow({ where: { code } });
   const [m, pcs] = [await unit('M'), await unit('PCS')];
-  const mk = (sku: string, name: string, unitId: number, qty: number, min: number) =>
+  const mk = (sku: string, name: string, unitId: number, qty: number, min: number, unitCost: number) =>
     prisma.material.upsert({
       where: { sku }, update: {},
-      create: { sku, name, unitId, stock: { create: { quantity: qty, minimumQuantity: min } } },
+      create: { sku, name, unitId, unitCost, stock: { create: { quantity: qty, minimumQuantity: min } } },
     });
-  const tissu = await mk('TIS-JEAN-001', 'Tissu Jean', m.id, 125, 20);
-  const fermeture = await mk('FERM-001', 'Fermeture', pcs.id, 40, 10);
-  const bouton = await mk('BOUT-001', 'Bouton', pcs.id, 200, 50);
+  const tissu = await mk('TIS-JEAN-001', 'Tissu Jean', m.id, 125, 20, 8);
+  const fermeture = await mk('FERM-001', 'Fermeture', pcs.id, 40, 10, 1.5);
+  const bouton = await mk('BOUT-001', 'Bouton', pcs.id, 200, 50, 0.2);
   await prisma.product.upsert({
     where: { sku: 'PAN-JEAN-001' }, update: {},
     create: {

@@ -6,7 +6,7 @@ import { SessionUser, api, clearSession, getUser } from '@/lib/api';
 
 const nav = [
   ['/', 'Dashboard'], ['/products', 'Produits'], ['/materials', 'Matières'],
-  ['/stock', 'Stocks'], ['/production', 'Production'], ['/purchases', 'Achats'], ['/settings', 'Paramètres'],
+  ['/stock', 'Stocks'], ['/production', 'Production'], ['/purchases', 'Achats'], ['/reports', 'Rapports'], ['/settings', 'Paramètres'],
 ] as const;
 
 /** Pages that only some roles may open (the API enforces the same rules; this just avoids showing dead forms). */
@@ -14,6 +14,7 @@ const RESTRICTED: [RegExp, SessionUser['role']][] = [
   [/^\/products\/new$/, 'MANAGER'], [/^\/products\/\d+\/edit$/, 'MANAGER'],
   [/^\/materials\/new$/, 'MANAGER'], [/^\/materials\/\d+$/, 'MANAGER'],
   [/^\/purchases\/new$/, 'MANAGER'], [/^\/purchases\/\d+\/edit$/, 'MANAGER'],
+  [/^\/reports/, 'MANAGER'],
   [/^\/settings\/users/, 'ADMIN'],
 ];
 const RANK = { VIEWER: 0, OPERATOR: 1, MANAGER: 2, ADMIN: 3 } as const;
@@ -39,7 +40,7 @@ export function Shell({ children }: { children: ReactNode }) {
       <aside className="md:w-48 md:shrink-0">
         <p className="mb-3 text-lg font-semibold">Inventory</p>
         <nav className="flex gap-1 md:flex-col">
-          {nav.map(([href, label]) => {
+          {nav.filter(([href]) => canOpen(href, user)).map(([href, label]) => {
             const active = href === '/' ? path === '/' : path.startsWith(href);
             return (
               <Link key={href} href={href}

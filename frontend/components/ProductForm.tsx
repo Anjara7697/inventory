@@ -37,6 +37,8 @@ export function ProductForm({ product }: { product?: any }) {
       const saved = product
         ? await api(`/products/${product.id}`, { method: 'PATCH', body })
         : await api('/products', { method: 'POST', body });
+      const min = f.get('minimumQuantity');
+      if (min !== null && min !== '') await api(`/inventory/products/${saved.id}/threshold`, { method: 'PATCH', body: { minimumQuantity: Number(min) } });
       router.push(`/products/${saved.id}`);
     } catch (err) { setError((err as Error).message); setBusy(false); }
   }
@@ -48,6 +50,7 @@ export function ProductForm({ product }: { product?: any }) {
           <Field label="Nom"><Input name="name" required maxLength={150} defaultValue={product?.name} /></Field>
           <Field label="SKU"><Input name="sku" required maxLength={100} pattern="[A-Za-z0-9._\-]+" defaultValue={product?.sku} /></Field>
           <div className="sm:col-span-2"><Field label="Description"><Input name="description" defaultValue={product?.description ?? ''} /></Field></div>
+          <Field label="Seuil minimum de stock (alerte, 0 = aucune)"><Input name="minimumQuantity" type="number" step="any" min="0" defaultValue={product?.stock ? Number(product.stock.minimumQuantity) : 0} /></Field>
           <label className="flex items-center gap-2 text-sm"><input type="checkbox" name="active" defaultChecked={product?.active ?? true} /> Actif</label>
         </div>
       </Card>

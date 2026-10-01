@@ -3,7 +3,7 @@ import Link from 'next/link';
 import { useState } from 'react';
 import { canWrite } from '@/components/Shell';
 import { Badge, Card, ErrorText, Input, Pager, Table } from '@/components/ui';
-import { api, getUser, num } from '@/lib/api';
+import { api, getUser, money, num } from '@/lib/api';
 import { useDebounced, usePaged } from '@/lib/hooks';
 
 export default function Materials() {
@@ -25,7 +25,7 @@ export default function Materials() {
       </div>
       <ErrorText>{list.error}</ErrorText>
       <Card>
-        <Table head={['SKU', 'Nom', 'Caractéristiques', 'Stock', 'Seuil min.', '']}>
+        <Table head={['SKU', 'Nom', 'Caractéristiques', 'Stock', 'Seuil min.', 'Coût unit.', '']}>
           {list.items.map((m) => {
             const low = m.active && m.stock && Number(m.stock.quantity) <= Number(m.stock.minimumQuantity);
             return (
@@ -35,6 +35,7 @@ export default function Materials() {
                 <td className="space-x-1">{m.characteristics.map((c: any) => <Badge key={c.characteristicId}>{c.characteristic.name}: {c.value}</Badge>)}</td>
                 <td>{low ? <Badge tone="amber">{num(m.stock.quantity)} {m.unit.symbol}</Badge> : `${num(m.stock?.quantity)} ${m.unit.symbol}`}</td>
                 <td>{num(m.stock?.minimumQuantity)} {m.unit.symbol}</td>
+                <td>{Number(m.unitCost) ? `${money(m.unitCost)} / ${m.unit.symbol}` : '—'}</td>
                 <td className="text-right">{manager && !m.active && (
                   <button className="text-xs underline" onClick={async () => { await api(`/materials/${m.id}`, { method: 'PATCH', body: { active: true } }); list.reload(); }}>Réactiver</button>)}</td>
               </tr>

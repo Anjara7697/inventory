@@ -18,12 +18,12 @@ export default function Dashboard() {
         <Stat label="Matières" value={materials.length} />
         <Stat label="Alertes" value={alerts.length} tone={alerts.length ? 'text-red-600' : ''} />
       </div>
-      <Card title="Matières bientôt épuisées">
+      <Card title="Alertes de stock">
         {alerts.length === 0 ? <p className="text-sm text-zinc-500">Aucune alerte.</p> : (
-          <Table head={['Matière', 'Stock', 'Seuil min.', 'État']}>
+          <Table head={['Élément', 'Stock', 'Seuil min.', 'État']}>
             {alerts.map((a: any) => (
-              <tr key={a.materialId}>
-                <td>{a.name}</td><td>{num(a.quantity)} {a.unit}</td><td>{num(a.minimumQuantity)} {a.unit}</td>
+              <tr key={`${a.kind}-${a.materialId ?? a.productId}`}>
+                <td>{a.name} {a.kind === 'product' && <Badge>produit fini</Badge>}</td><td>{num(a.quantity)} {a.unit}</td><td>{num(a.minimumQuantity)} {a.unit}</td>
                 <td><Badge tone={a.type === 'OUT_OF_STOCK' ? 'red' : 'amber'}>{a.type === 'OUT_OF_STOCK' ? 'Rupture' : 'Stock faible'}</Badge></td>
               </tr>
             ))}

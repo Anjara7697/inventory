@@ -67,3 +67,8 @@ export async function apiList<T = any>(path: string): Promise<{ items: T[]; tota
 
 export const num = (v: string | number | null | undefined, digits = 3) =>
   v === null || v === undefined ? '' : Number(v).toLocaleString('fr-FR', { maximumFractionDigits: digits });
+
+const CURRENCY = process.env.NEXT_PUBLIC_CURRENCY ?? 'EUR';
+/** Formats an amount in the configured currency (NEXT_PUBLIC_CURRENCY, ISO code, default EUR). */
+export const money = (v: string | number | null | undefined) =>
+  v === null || v === undefined ? '' : Number(v).toLocaleString('fr-FR', { style: 'currency', currency: CURRENCY, maximumFractionDigits: 2 });

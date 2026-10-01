@@ -22,6 +22,11 @@ export class InventoryController {
     return this.inv.updateThresholds(id, dto.minimumQuantity, dto.maximumQuantity);
   }
 
+  @Roles('MANAGER') @Patch('inventory/products/:id/threshold')
+  productThreshold(@Param('id', ParseIntPipe) id: number, @Body() dto: ThresholdsDto) {
+    return this.inv.updateProductThreshold(id, dto.minimumQuantity ?? 0);
+  }
+
   @Get('stock-movements')
   movements(
     @Res({ passthrough: true }) res: Response,

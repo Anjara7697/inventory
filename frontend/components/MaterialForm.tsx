@@ -26,7 +26,7 @@ export function MaterialForm({ material }: { material?: any }) {
     const body = {
       name: f.get('name'), sku: f.get('sku'), description: (f.get('description') as string) || undefined,
       unitId: Number(f.get('unitId')), active: f.get('active') === 'on',
-      minimumQuantity: optNum(f.get('minimumQuantity')), maximumQuantity: optNum(f.get('maximumQuantity')),
+      unitCost: optNum(f.get('unitCost')), minimumQuantity: optNum(f.get('minimumQuantity')), maximumQuantity: optNum(f.get('maximumQuantity')),
       characteristics: rows.map((r) => ({ characteristicId: Number(r.characteristicId), value: r.value })),
     };
     setBusy(true); setError(undefined);
@@ -57,6 +57,7 @@ export function MaterialForm({ material }: { material?: any }) {
             </Select>
           </Field>
           <Field label="Description"><Input name="description" defaultValue={material?.description ?? ''} /></Field>
+          <Field label="Coût unitaire (par unité de stock)"><Input name="unitCost" type="number" step="any" min="0" defaultValue={material ? Number(material.unitCost) : 0} /></Field>
           <Field label="Seuil minimum (alerte)"><Input name="minimumQuantity" type="number" step="any" min="0" defaultValue={stock ? Number(stock.minimumQuantity) : 0} /></Field>
           <Field label="Seuil maximum"><Input name="maximumQuantity" type="number" step="any" min="0" defaultValue={stock?.maximumQuantity ? Number(stock.maximumQuantity) : ''} /></Field>
           <label className="flex items-center gap-2 text-sm"><input type="checkbox" name="active" defaultChecked={material?.active ?? true} /> Active</label>

@@ -13,6 +13,8 @@ export class CreateMaterialDto {
   @ApiPropertyOptional() @IsOptional() @IsString() description?: string;
   @ApiProperty() @IsInt() unitId: number;
   @ApiPropertyOptional({ default: true }) @IsOptional() @IsBoolean() active?: boolean;
+  @ApiPropertyOptional({ description: 'Cost per stock unit (updated automatically from purchase receipts)', default: 0 })
+  @IsOptional() @IsNumber({ maxDecimalPlaces: 8 }) @Min(0) unitCost?: number;
   @ApiPropertyOptional({ description: 'Alert threshold (in the material unit)', default: 0 })
   @IsOptional() @IsNumber({ maxDecimalPlaces: 8 }) @Min(0) minimumQuantity?: number;
   @ApiPropertyOptional() @IsOptional() @IsNumber({ maxDecimalPlaces: 8 }) @Min(0) maximumQuantity?: number;

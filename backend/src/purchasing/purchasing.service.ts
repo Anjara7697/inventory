@@ -3,6 +3,7 @@ import { Prisma, PurchaseOrderStatus } from '@prisma/client';
 import { InventoryService } from '../inventory/inventory.service';
 import { PageQuery } from '../common/paging';
 import { PrismaService } from '../prisma/prisma.service';
+import { convertQuantity } from '../units/units.service';
 import {
   CreatePurchaseOrderDto, CreateSupplierDto, PurchaseLineDto, UpdatePurchaseOrderDto, UpdateSupplierDto,
 } from './purchasing.dto';
@@ -101,6 +102,7 @@ export class PurchasingService {
       });
       if (claimed.count === 0) throw new ConflictException(`Order is ${order.status}, only ORDERED orders can be received`);
       for (const l of order.lines) {
+        if (l.unitPrice) await this.updateAverageCost(tx, l);
         await this.inventory.applyMovement(tx, {
           type: 'ENTRY', materialId: l.materialId, quantity: l.quantity, unitId: l.unitId,
           userId, reference: orderRef(id), reason: 'Purchase order received',
@@ -108,6 +110,24 @@ export class PurchasingService {
       }
     });
     return this.findOne(id);
+  }
+
+  /**
+   * Weighted-average cost: (oldQty × oldCost + received × price) / (oldQty + received),
+   * everything expressed per stock unit. The stock row is locked so concurrent movements cannot skew it.
+   */
+  private async updateAverageCost(tx: Prisma.TransactionClient, l: { materialId: number; quantity: Prisma.Decimal; unitId: number; unitPrice: Prisma.Decimal | null }) {
+    await tx.$queryRaw`SELECT 1 FROM material_stocks WHERE material_id = ${l.materialId} FOR UPDATE`;
+    const [material, lineUnit] = await Promise.all([
+      tx.material.findUniqueOrThrow({ where: { id: l.materialId }, include: { unit: true, stock: true } }),
+      tx.unit.findUniqueOrThrow({ where: { id: l.unitId } }),
+    ]);
+    const received = convertQuantity(l.quantity, lineUnit, material.unit);
+    const pricePerStockUnit = l.unitPrice!.mul(material.unit.conversionFactor).div(lineUnit.conversionFactor);
+    const oldQty = material.stock?.quantity ?? new Prisma.Decimal(0);
+    const total = oldQty.add(received);
+    const cost = oldQty.mul(material.unitCost).add(received.mul(pricePerStockUnit)).div(total);
+    await tx.material.update({ where: { id: l.materialId }, data: { unitCost: cost.toDecimalPlaces(8) } });
   }
 
   private async transition(id: number, from: PurchaseOrderStatus[], to: PurchaseOrderStatus, extra: Prisma.PurchaseOrderUpdateManyMutationInput) {

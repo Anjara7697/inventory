@@ -1,6 +1,6 @@
 import { ApiProperty, ApiPropertyOptional, PartialType } from '@nestjs/swagger';
 import { Type } from 'class-transformer';
-import { ArrayMinSize, ArrayUnique, IsArray, IsBoolean, IsEmail, IsInt, IsNumber, IsOptional, IsPositive, IsString, MaxLength, ValidateNested } from 'class-validator';
+import { ArrayMinSize, ArrayUnique, IsArray, IsBoolean, IsEmail, IsInt, IsNumber, IsOptional, IsPositive, IsString, MaxLength, Min, ValidateNested } from 'class-validator';
 
 export class CreateSupplierDto {
   @ApiProperty() @IsString() @MaxLength(150) name: string;
@@ -15,6 +15,8 @@ export class PurchaseLineDto {
   @ApiProperty() @IsInt() materialId: number;
   @ApiProperty() @IsNumber({ maxDecimalPlaces: 8 }) @IsPositive() quantity: number;
   @ApiProperty({ description: 'Same unit category as the material' }) @IsInt() unitId: number;
+  @ApiPropertyOptional({ description: 'Price per line unit; on receipt it updates the material average cost' })
+  @IsOptional() @IsNumber({ maxDecimalPlaces: 8 }) @Min(0) unitPrice?: number;
 }
 
 export class CreatePurchaseOrderDto {

@@ -86,6 +86,8 @@ model Material {
   sku         String  @unique @db.VarChar(100)
   description String?
   unitId      Int     @map("unit_id")
+  /// Average cost per stock unit (maintained from purchase receipts, editable by hand)
+  unitCost    Decimal @default(0) @map("unit_cost") @db.Decimal(20, 8)
   active      Boolean @default(true)
 
   unit            Unit                     @relation(fields: [unitId], references: [id], onDelete: Restrict)
@@ -184,10 +186,11 @@ model MaterialStock {
 }
 
 model ProductStock {
-  id        Int      @id @default(autoincrement())
-  productId Int      @unique @map("product_id")
-  quantity  Decimal  @default(0) @db.Decimal(20, 8)
-  updatedAt DateTime @updatedAt @map("updated_at")
+  id              Int      @id @default(autoincrement())
+  productId       Int      @unique @map("product_id")
+  quantity        Decimal  @default(0) @db.Decimal(20, 8)
+  minimumQuantity Decimal  @default(0) @map("minimum_quantity") @db.Decimal(20, 8)
+  updatedAt       DateTime @updatedAt @map("updated_at")
 
   product Product @relation(fields: [productId], references: [id], onDelete: Cascade)
 
@@ -268,11 +271,13 @@ model PurchaseOrder {
 }
 
 model PurchaseOrderLine {
-  id         Int     @id @default(autoincrement())
-  orderId    Int     @map("order_id")
-  materialId Int     @map("material_id")
-  quantity   Decimal @db.Decimal(20, 8)
-  unitId     Int     @map("unit_id")
+  id         Int      @id @default(autoincrement())
+  orderId    Int      @map("order_id")
+  materialId Int      @map("material_id")
+  quantity   Decimal  @db.Decimal(20, 8)
+  unitId     Int      @map("unit_id")
+  /// Price per line unit (optional)
+  unitPrice  Decimal? @map("unit_price") @db.Decimal(20, 8)
 
   order    PurchaseOrder @relation(fields: [orderId], references: [id], onDelete: Cascade)
   material Material      @relation(fields: [materialId], references: [id], onDelete: Restrict)
