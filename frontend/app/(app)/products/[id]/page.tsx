@@ -43,6 +43,8 @@ export default function ProductPage() {
       <p className="text-sm"><Link href="/products" className="underline">← Produits</Link></p>
       <div className="flex items-baseline gap-3">
         <h1 className="text-xl font-semibold">{p.name}</h1><span className="font-mono text-xs text-zinc-500">{p.sku}</span>
+        {!p.active && <Badge tone="amber">Inactif</Badge>}
+        {canWrite(user, 'MANAGER') && <Link href={`/products/${id}/edit`} className="ml-auto text-sm underline">Modifier</Link>}
       </div>
       {p.description && <p className="text-sm text-zinc-600 dark:text-zinc-400">{p.description}</p>}
 
