@@ -1,10 +1,10 @@
-import { ConflictException, Injectable, UnauthorizedException } from '@nestjs/common';
+import { BadRequestException, ConflictException, Injectable, UnauthorizedException } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { JwtService } from '@nestjs/jwt';
 import { User } from '@prisma/client';
 import * as bcrypt from 'bcryptjs';
 import { PrismaService } from '../prisma/prisma.service';
-import { RegisterDto } from './auth.dto';
+import { ChangePasswordDto, RegisterDto, UpdateProfileDto } from './auth.dto';
 
 @Injectable()
 export class AuthService {
@@ -55,6 +55,30 @@ export class AuthService {
       throw new UnauthorizedException('Invalid refresh token');
     }
     return this.issueTokens(user);
+  }
+
+  async me(userId: number) {
+    const u = await this.prisma.user.findUnique({ where: { id: userId } });
+    if (!u) throw new UnauthorizedException();
+    return { id: u.id, email: u.email, firstName: u.firstName, lastName: u.lastName, role: u.role };
+  }
+
+  async updateProfile(userId: number, dto: UpdateProfileDto) {
+    await this.prisma.user.update({ where: { id: userId }, data: dto });
+    return this.me(userId);
+  }
+
+  /** Verifies the current password, then revokes the old refresh token and returns a fresh session. */
+  async changePassword(userId: number, dto: ChangePasswordDto) {
+    const user = await this.prisma.user.findUnique({ where: { id: userId } });
+    if (!user || !(await bcrypt.compare(dto.currentPassword, user.passwordHash))) {
+      throw new BadRequestException('Current password is incorrect');
+    }
+    if (dto.currentPassword === dto.newPassword) throw new BadRequestException('New password must be different');
+    const updated = await this.prisma.user.update({
+      where: { id: userId }, data: { passwordHash: await bcrypt.hash(dto.newPassword, 10) },
+    });
+    return this.issueTokens(updated);
   }
 
   async logout(userId: number) {

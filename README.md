@@ -85,3 +85,9 @@ npm run test:e2e    # API + PostgreSQL — DATABASE_URL doit viser une base jeta
 ### Édition du référentiel
 
 Unités, catégories d'unités, caractéristiques et fournisseurs sont modifiables dans Paramètres. Garde-fous : le facteur de conversion et la catégorie d'une unité, et le type d'une caractéristique, sont figés dès qu'ils sont utilisés (sinon les quantités déjà enregistrées changeraient de sens) ; nom, symbole et code restent modifiables.
+
+### Profil et accès
+
+- `GET/PATCH /auth/me` et `POST /auth/change-password` : chacun gère son nom et son mot de passe (page « Mon profil »). Un changement de mot de passe déconnecte les autres sessions.
+- Un compte n'a qu'**une session rafraîchissable à la fois** : se connecter sur un second appareil invalide le renouvellement automatique du premier (son jeton d'accès reste valable 15 minutes).
+- Les pages réservées (création/édition de produits, matières, commandes ; gestion des utilisateurs) affichent « Accès refusé » aux rôles non autorisés. L'API applique les mêmes règles.

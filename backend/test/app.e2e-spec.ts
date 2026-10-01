@@ -149,4 +149,24 @@ describe('Inventory API (e2e)', () => {
     await http.patch(`/unit-categories/${cat.id}`).set(auth(admin)).send({ name: 'Renamed' }).expect(200);
     await http.patch(`/unit-categories/${cat.id}`).set(auth(admin)).send({ code: 'lower' }).expect(400);
   });
+
+  it('lets a user read and update their profile and change their password', async () => {
+    const me = (await http.get('/auth/me').set(auth(viewer)).expect(200)).body;
+    expect(me.email).toBe('v@x.io');
+    expect(me.passwordHash).toBeUndefined();
+    const upd = (await http.patch('/auth/me').set(auth(viewer)).send({ firstName: 'Vera' }).expect(200)).body;
+    expect(upd.firstName).toBe('Vera');
+    await http.patch('/auth/me').set(auth(viewer)).send({ role: 'ADMIN' }).expect(400); // cannot self-promote
+
+    await http.post('/auth/change-password').set(auth(viewer)).send({ currentPassword: 'wrong-one', newPassword: 'newpassword1' }).expect(400);
+    await http.post('/auth/change-password').set(auth(viewer)).send({ currentPassword: 'password1', newPassword: 'short' }).expect(400);
+    await http.post('/auth/change-password').set(auth(viewer)).send({ currentPassword: 'password1', newPassword: 'password1' }).expect(400);
+    const old = (await http.post('/auth/login').send({ email: 'v@x.io', password: 'password1' })).body;
+    const changed = (await http.post('/auth/change-password').set(auth(viewer)).send({ currentPassword: 'password1', newPassword: 'newpassword1' }).expect(200)).body;
+    expect(changed.accessToken).toBeTruthy();
+    await http.post('/auth/login').send({ email: 'v@x.io', password: 'password1' }).expect(401);
+    await http.post('/auth/refresh').send({ refreshToken: old.refreshToken }).expect(401); // sessions opened before the change are revoked
+    await http.post('/auth/refresh').send({ refreshToken: changed.refreshToken }).expect(200);
+    await http.post('/auth/login').send({ email: 'v@x.io', password: 'newpassword1' }).expect(200);
+  });
 });
