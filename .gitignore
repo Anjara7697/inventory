@@ -6,3 +6,4 @@ coverage/
 *.tsbuildinfo
 .next/
 next-env.d.ts
+frontend/.env.local
