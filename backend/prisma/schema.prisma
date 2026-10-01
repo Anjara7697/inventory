@@ -1,0 +1,224 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+enum UserRole {
+  ADMIN
+  MANAGER
+  OPERATOR
+  VIEWER
+}
+
+enum CharacteristicDataType {
+  STRING
+  NUMBER
+  BOOLEAN
+}
+
+enum StockMovementType {
+  ENTRY
+  EXIT
+  PRODUCTION
+  LOSS
+  RETURN
+  ADJUSTMENT
+}
+
+enum ProductionStatus {
+  PENDING
+  IN_PROGRESS
+  COMPLETED
+  CANCELLED
+}
+
+model User {
+  id           Int      @id @default(autoincrement())
+  firstName    String   @map("first_name") @db.VarChar(100)
+  lastName     String   @map("last_name") @db.VarChar(100)
+  email        String   @unique @db.VarChar(255)
+  passwordHash String   @map("password_hash") @db.VarChar(255)
+  role         UserRole @default(OPERATOR)
+  refreshTokenHash String? @map("refresh_token_hash") @db.VarChar(255)
+
+  productions    Production[]
+  stockMovements StockMovement[]
+
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
+
+  @@map("users")
+}
+
+model Product {
+  id          Int     @id @default(autoincrement())
+  name        String  @db.VarChar(150)
+  sku         String  @unique @db.VarChar(100)
+  description String?
+  active      Boolean @default(true)
+
+  materials      ProductMaterial[]
+  stock          ProductStock?
+  stockMovements StockMovement[]
+  productions    Production[]
+
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
+
+  @@map("products")
+}
+
+model Material {
+  id          Int     @id @default(autoincrement())
+  name        String  @db.VarChar(150)
+  sku         String  @unique @db.VarChar(100)
+  description String?
+  unitId      Int     @map("unit_id")
+  active      Boolean @default(true)
+
+  unit            Unit                     @relation(fields: [unitId], references: [id], onDelete: Restrict)
+  characteristics MaterialCharacteristic[]
+  products        ProductMaterial[]
+  stock           MaterialStock?
+  stockMovements  StockMovement[]
+
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
+
+  @@index([unitId])
+  @@map("materials")
+}
+
+model UnitCategory {
+  id    Int    @id @default(autoincrement())
+  name  String @db.VarChar(100)
+  code  String @unique @db.VarChar(50)
+  units Unit[]
+
+  @@map("unit_categories")
+}
+
+model Unit {
+  id               Int     @id @default(autoincrement())
+  name             String  @db.VarChar(100)
+  symbol           String  @db.VarChar(20)
+  code             String  @unique @db.VarChar(50)
+  categoryId       Int     @map("category_id")
+  conversionFactor Decimal @map("conversion_factor") @db.Decimal(20, 8)
+
+  category        UnitCategory      @relation(fields: [categoryId], references: [id], onDelete: Restrict)
+  materials       Material[]
+  productMaterials ProductMaterial[]
+  stockMovements  StockMovement[]
+
+  createdAt DateTime @default(now()) @map("created_at")
+
+  @@index([categoryId])
+  @@map("units")
+}
+
+model Characteristic {
+  id       Int                    @id @default(autoincrement())
+  name     String                 @db.VarChar(100)
+  code     String                 @unique @db.VarChar(50)
+  dataType CharacteristicDataType @map("data_type")
+
+  materials MaterialCharacteristic[]
+
+  @@map("characteristics")
+}
+
+model MaterialCharacteristic {
+  materialId       Int    @map("material_id")
+  characteristicId Int    @map("characteristic_id")
+  value            String @db.VarChar(255)
+
+  material       Material       @relation(fields: [materialId], references: [id], onDelete: Cascade)
+  characteristic Characteristic @relation(fields: [characteristicId], references: [id], onDelete: Restrict)
+
+  @@id([materialId, characteristicId])
+  @@map("material_characteristics")
+}
+
+model ProductMaterial {
+  id         Int     @id @default(autoincrement())
+  productId  Int     @map("product_id")
+  materialId Int     @map("material_id")
+  quantity   Decimal @db.Decimal(20, 8)
+  unitId     Int     @map("unit_id")
+
+  product  Product  @relation(fields: [productId], references: [id], onDelete: Cascade)
+  material Material @relation(fields: [materialId], references: [id], onDelete: Restrict)
+  unit     Unit     @relation(fields: [unitId], references: [id], onDelete: Restrict)
+
+  @@unique([productId, materialId])
+  @@index([materialId])
+  @@map("product_materials")
+}
+
+model MaterialStock {
+  id              Int      @id @default(autoincrement())
+  materialId      Int      @unique @map("material_id")
+  quantity        Decimal  @default(0) @db.Decimal(20, 8)
+  minimumQuantity Decimal  @default(0) @map("minimum_quantity") @db.Decimal(20, 8)
+  maximumQuantity Decimal? @map("maximum_quantity") @db.Decimal(20, 8)
+  updatedAt       DateTime @updatedAt @map("updated_at")
+
+  material Material @relation(fields: [materialId], references: [id], onDelete: Cascade)
+
+  @@map("material_stocks")
+}
+
+model ProductStock {
+  id        Int      @id @default(autoincrement())
+  productId Int      @unique @map("product_id")
+  quantity  Decimal  @default(0) @db.Decimal(20, 8)
+  updatedAt DateTime @updatedAt @map("updated_at")
+
+  product Product @relation(fields: [productId], references: [id], onDelete: Cascade)
+
+  @@map("product_stocks")
+}
+
+model StockMovement {
+  id         Int               @id @default(autoincrement())
+  type       StockMovementType
+  quantity   Decimal           @db.Decimal(20, 8)
+  unitId     Int               @map("unit_id")
+  materialId Int?              @map("material_id")
+  productId  Int?              @map("product_id")
+  userId     Int               @map("user_id")
+  reason     String?           @db.VarChar(255)
+  reference  String?           @db.VarChar(100)
+  createdAt  DateTime          @default(now()) @map("created_at")
+
+  unit     Unit      @relation(fields: [unitId], references: [id], onDelete: Restrict)
+  material Material? @relation(fields: [materialId], references: [id], onDelete: Restrict)
+  product  Product?  @relation(fields: [productId], references: [id], onDelete: Restrict)
+  user     User      @relation(fields: [userId], references: [id], onDelete: Restrict)
+
+  @@index([materialId, createdAt])
+  @@index([productId, createdAt])
+  @@index([reference])
+  @@map("stock_movements")
+}
+
+model Production {
+  id          Int              @id @default(autoincrement())
+  productId   Int              @map("product_id")
+  quantity    Decimal          @db.Decimal(20, 8)
+  status      ProductionStatus @default(PENDING)
+  createdBy   Int              @map("created_by")
+  createdAt   DateTime         @default(now()) @map("created_at")
+  completedAt DateTime?        @map("completed_at")
+
+  product Product @relation(fields: [productId], references: [id], onDelete: Restrict)
+  user    User    @relation(fields: [createdBy], references: [id], onDelete: Restrict)
+
+  @@index([productId])
+  @@map("productions")
+}
