@@ -34,6 +34,12 @@ export default function ProductPage() {
     } finally { setBusy(false); }
   }
 
+  async function remove() {
+    if (!confirm('Supprimer ce produit ? S\'il a un historique, il sera seulement désactivé.')) return;
+    try { await api(`/products/${id}`, { method: 'DELETE' }); router.push('/products'); }
+    catch (err) { setError((err as Error).message); }
+  }
+
   if (product.error) return <ErrorText>{product.error}</ErrorText>;
   const p = product.data;
   if (!p) return null;
@@ -44,8 +50,14 @@ export default function ProductPage() {
       <div className="flex items-baseline gap-3">
         <h1 className="text-xl font-semibold">{p.name}</h1><span className="font-mono text-xs text-zinc-500">{p.sku}</span>
         {!p.active && <Badge tone="amber">Inactif</Badge>}
-        {canWrite(user, 'MANAGER') && <Link href={`/products/${id}/edit`} className="ml-auto text-sm underline">Modifier</Link>}
+        {canWrite(user, 'MANAGER') && (
+          <span className="ml-auto flex gap-3 text-sm">
+            <Link href={`/products/${id}/edit`} className="underline">Modifier</Link>
+            <button className="text-red-600 underline" onClick={remove}>Supprimer</button>
+          </span>
+        )}
       </div>
+      <ErrorText>{error}</ErrorText>
       {p.description && <p className="text-sm text-zinc-600 dark:text-zinc-400">{p.description}</p>}
 
       <div className="grid gap-3 md:grid-cols-2">

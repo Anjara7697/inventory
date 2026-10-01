@@ -14,7 +14,7 @@ mouvements de stock et production (voir les documents de conception, MCD et MLD)
 | 5 — Production | Capacité, vérification, besoins, production transactionnelle | ✅ backend |
 | 6 — Approvisionnement | « À acheter » via `material-requirements` ; fournisseurs / commandes | partiel |
 | 7 — Dashboard, rapports | Dashboard et alertes faits ; rapports à faire | partiel |
-| Frontend (Next.js + Tailwind) | Connexion, dashboard, produits (capacité, vérification, production), matières, stocks et mouvements, historique de production, création/édition de produits (éditeur de nomenclature) et de matières (caractéristiques) | ✅ première version |
+| Frontend (Next.js + Tailwind) | Connexion, dashboard, produits (capacité, vérification, production), matières, stocks et mouvements, historique de production, création/édition de produits (éditeur de nomenclature) et de matières (caractéristiques), paramètres (unités, caractéristiques, utilisateurs) | ✅ première version |
 
 ## Démarrage
 
