@@ -1,7 +1,14 @@
 'use client';
 import { Suspense } from 'react';
 import { PurchaseForm } from '@/components/PurchaseForm';
+import { Breadcrumb, PageHeader } from '@/components/ui';
 
 export default function NewPurchase() {
-  return (<><h1 className="text-xl font-semibold">Nouvelle commande</h1><Suspense><PurchaseForm /></Suspense></>);
+  return (
+    <>
+      <Breadcrumb items={[['Achats', '/purchases'], ['Nouvelle commande']]} />
+      <PageHeader title="Nouvelle commande" />
+      <Suspense><PurchaseForm /></Suspense>
+    </>
+  );
 }
