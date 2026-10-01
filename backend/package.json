@@ -13,7 +13,8 @@
     "prisma:generate": "prisma generate",
     "prisma:migrate": "prisma migrate dev",
     "prisma:deploy": "prisma migrate deploy",
-    "seed": "ts-node prisma/seed.ts"
+    "seed": "prisma db seed",
+    "seed:demo": "cross-env SEED_DEMO=true prisma db seed"
   },
   "prisma": {
     "seed": "ts-node prisma/seed.ts"
@@ -44,6 +45,7 @@
     "@types/node": "^26.6.3",
     "@types/passport-jwt": "^4.0.1",
     "@types/supertest": "^7.2.1",
+    "cross-env": "^10.1.0",
     "jest": "^30.5.2",
     "prisma": "^6.19.3",
     "supertest": "^7.3.0",
