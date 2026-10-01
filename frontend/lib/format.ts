@@ -21,3 +21,6 @@ export function relativeDay(iso: string | null | undefined, todayAsTime = true) 
 /** "1 oct., 10:42" */
 export const dateTime = (iso: string) =>
   new Date(iso).toLocaleString('fr-FR', { day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit' });
+
+/** Production reference, same format as the backend (stock movements carry it). */
+export const productionRef = (id: number) => `PROD-${String(id).padStart(5, '0')}`;

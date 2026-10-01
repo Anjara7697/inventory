@@ -68,7 +68,7 @@ export default function Dashboard() {
         title="Tableau de bord"
         overline={new Date().toLocaleDateString('fr-FR', { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' }).replace(/^./, (c) => c.toUpperCase())}
         actions={operator && (<>
-          <Link href="/production" className={buttonClass('secondary')}><IconFactory />Lancer une production</Link>
+          <Link href="/production?new=1" className={buttonClass('secondary')}><IconFactory />Lancer une production</Link>
           <Link href="/stock?new=1" className={buttonClass('primary')}><IconPlus />Nouveau mouvement</Link>
         </>)}
       />
