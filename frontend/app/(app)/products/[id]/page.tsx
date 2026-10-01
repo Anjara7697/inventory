@@ -35,8 +35,8 @@ export default function ProductPage() {
   async function produce(quantity: number) {
     setBusy(true); setError(undefined);
     try {
-      await api('/production', { method: 'POST', body: { productId: Number(id), quantity } });
-      router.push('/production');
+      const created = await api('/production', { method: 'POST', body: { productId: Number(id), quantity } });
+      router.push(`/production/${created.id}`);
     } catch (err: any) {
       setError(err.body?.missing ? `Stock insuffisant : ${err.body.missing.map((m: any) => `il manque ${num(m.missing)} ${m.unit} de ${m.name}`).join(', ')}.` : err.message);
       setBusy(false);
