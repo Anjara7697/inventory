@@ -67,6 +67,11 @@ describe('Stock & production (e2e)', () => {
     await enter(ferm.id, -5).expect(400);
     const mv = (await http.get(`/stock-movements?materialId=${tissu.id}`).set(auth(admin))).body;
     expect(mv.map((x: any) => Number(x.quantity)).sort((a: number, b: number) => a - b)).toEqual([25, 100]);
+    // the overview carries the date of each item's latest movement (null for the product, never moved)
+    const overview = (await http.get('/inventory').set(auth(admin)).expect(200)).body;
+    const tissuRow = overview.materials.find((s: any) => s.materialId === tissu.id);
+    expect(new Date(tissuRow.lastMovementAt).getTime()).toBe(Math.max(...mv.map((x: any) => new Date(x.createdAt).getTime())));
+    expect(overview.products[0].lastMovementAt).toBeNull();
   });
 
   it('computes capacity and limiting material (doc example)', async () => {

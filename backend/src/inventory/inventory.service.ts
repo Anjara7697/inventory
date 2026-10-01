@@ -18,8 +18,19 @@ export class InventoryService {
 
   // ---- reads ----
   async overview() {
-    const [materials, products] = await Promise.all([this.materialStocks(), this.productStocks()]);
-    return { materials, products, alerts: await this.alerts() };
+    const [materials, products, lastMaterial, lastProduct] = await Promise.all([
+      this.materialStocks(), this.productStocks(),
+      this.prisma.stockMovement.groupBy({ by: ['materialId'], where: { materialId: { not: null } }, _max: { createdAt: true } }),
+      this.prisma.stockMovement.groupBy({ by: ['productId'], where: { productId: { not: null } }, _max: { createdAt: true } }),
+    ]);
+    // date of the latest movement per item ("Dernier mouvement" column), null when never moved
+    const lastM = new Map(lastMaterial.map((r) => [r.materialId, r._max.createdAt]));
+    const lastP = new Map(lastProduct.map((r) => [r.productId, r._max.createdAt]));
+    return {
+      materials: materials.map((s) => ({ ...s, lastMovementAt: lastM.get(s.materialId) ?? null })),
+      products: products.map((s) => ({ ...s, lastMovementAt: lastP.get(s.productId) ?? null })),
+      alerts: await this.alerts(),
+    };
   }
 
   materialStocks() {

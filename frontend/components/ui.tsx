@@ -1,14 +1,14 @@
 import Link from 'next/link';
-import { ButtonHTMLAttributes, InputHTMLAttributes, ReactNode, SelectHTMLAttributes, TextareaHTMLAttributes } from 'react';
+import { ButtonHTMLAttributes, ComponentProps, InputHTMLAttributes, ReactNode, TextareaHTMLAttributes } from 'react';
 
 export const cx = (...c: (string | false | null | undefined)[]) => c.filter(Boolean).join(' ');
 
 type Variant = 'primary' | 'secondary' | 'ghost' | 'danger' | 'ghost-accent' | 'ghost-danger';
-type Size = 'md' | 'sm' | 'icon' | 'icon-lg';
+type Size = 'md' | 'sm' | 'icon' | 'icon-sm' | 'icon-lg';
 export const buttonClass = (variant: Variant = 'primary', size: Size = 'md') => cx(
   'inline-flex items-center justify-center gap-2 whitespace-nowrap rounded-lg border font-medium transition-colors disabled:cursor-not-allowed disabled:opacity-50',
   size === 'md' && 'h-9 px-3.5 text-sm', size === 'sm' && 'h-8 px-2.5 text-[13px]',
-  size === 'icon' && 'h-9 w-9 text-sm', size === 'icon-lg' && 'h-11 w-11 text-sm',
+  size === 'icon' && 'h-9 w-9 text-sm', size === 'icon-sm' && 'h-8 w-8 text-sm', size === 'icon-lg' && 'h-11 w-11 text-sm',
   variant === 'primary' && 'border-transparent bg-accent text-on-accent hover:brightness-110',
   variant === 'secondary' && 'border-line-strong bg-surface text-ink hover:bg-sunken',
   variant === 'ghost' && 'border-transparent bg-transparent text-ink-muted hover:bg-sunken hover:text-ink',
@@ -23,8 +23,8 @@ export function Button({ variant = 'primary', size = 'md', className, ...p }: Bu
 }
 
 const field = 'h-[38px] w-full rounded-lg border border-line-strong bg-surface px-3 text-sm text-ink placeholder:text-ink-muted focus:border-accent focus:outline-2 focus:outline-offset-1 focus:outline-accent aria-[invalid=true]:border-danger';
-export const Input = (p: InputHTMLAttributes<HTMLInputElement>) => <input {...p} className={cx(field, p.type === 'checkbox' && 'h-4 w-4', p.className)} />;
-export const Select = (p: SelectHTMLAttributes<HTMLSelectElement>) => <select {...p} className={cx(field, p.className)} />;
+export const Input = (p: ComponentProps<'input'>) => <input {...p} className={cx(field, p.type === 'checkbox' && 'h-4 w-4', p.className)} />;
+export const Select = (p: ComponentProps<'select'>) => <select {...p} className={cx(field, p.className)} />;
 export const Textarea = (p: TextareaHTMLAttributes<HTMLTextAreaElement>) => <textarea {...p} className={cx(field, 'h-auto py-2.5 leading-[22px]', p.className)} />;
 
 /** Checkbox with a label and an optional explanation, laid out as a setting row. */
