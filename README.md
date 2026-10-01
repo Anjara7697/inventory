@@ -23,6 +23,7 @@ docker compose up -d postgres
 cd backend
 cp .env.example .env
 npm install
+npx prisma generate                 # généré aussi par npm install ; à relancer si le schéma change
 npx prisma migrate deploy
 npm run seed:demo                   # unités, caractéristiques, admin, exemple « Pantalon Jean » (Windows/macOS/Linux)
 npm run start:dev                   # http://localhost:3001 — Swagger : /docs

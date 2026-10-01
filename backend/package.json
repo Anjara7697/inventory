@@ -14,7 +14,8 @@
     "prisma:migrate": "prisma migrate dev",
     "prisma:deploy": "prisma migrate deploy",
     "seed": "prisma db seed",
-    "seed:demo": "cross-env SEED_DEMO=true prisma db seed"
+    "seed:demo": "cross-env SEED_DEMO=true prisma db seed",
+    "postinstall": "prisma generate"
   },
   "prisma": {
     "seed": "ts-node prisma/seed.ts"
