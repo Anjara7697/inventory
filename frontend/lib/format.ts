@@ -38,3 +38,13 @@ export const orderTotal = (o: { lines: { unitPrice?: string | number | null; qua
 /** "29 sept." */
 export const shortDate = (iso: string | null | undefined) =>
   iso ? new Date(iso).toLocaleDateString('fr-FR', { day: 'numeric', month: 'short' }) : '—';
+
+/** User roles as shown to people, with what each one can do. */
+export const ROLE_LABEL: Record<string, string> = { ADMIN: 'Administrateur', MANAGER: 'Responsable', OPERATOR: 'Opérateur', VIEWER: 'Lecture seule' };
+export const ROLE_HELP: [string, string][] = [
+  ['ADMIN', 'Tout, y compris la gestion des utilisateurs.'],
+  ['MANAGER', 'Référentiel, achats, rapports, ajustements de stock.'],
+  ['OPERATOR', 'Mouvements de stock, production, réceptions.'],
+  ['VIEWER', 'Consulte tout, ne modifie rien.'],
+];
+export const initials = (u: { firstName?: string; lastName?: string }) => `${u.firstName?.[0] ?? ''}${u.lastName?.[0] ?? ''}`.toUpperCase();

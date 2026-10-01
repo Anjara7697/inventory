@@ -1,74 +1,88 @@
 'use client';
 import { FormEvent, useState } from 'react';
+import { IconPlus } from '@/components/icons';
+import { ConfirmRow, RowActions } from '@/components/RowActions';
 import { canWrite } from '@/components/Shell';
-import { Badge, Button, Card, ErrorText, Field, Input, Select, Table } from '@/components/ui';
+import { Badge, Button, Card, ErrorText, Field, Input, Loading, Select, Table } from '@/components/ui';
 import { api, getUser } from '@/lib/api';
 import { useApi } from '@/lib/hooks';
 
 const TYPES: Record<string, string> = { STRING: 'Texte', NUMBER: 'Nombre', BOOLEAN: 'Oui / Non' };
+const EMPTY = { name: '', code: '', dataType: 'STRING' };
 
 export default function CharacteristicsSettings() {
-  const { data, reload } = useApi<any[]>('/characteristics');
+  const { data, reload, loading, error: loadError } = useApi<any[]>('/characteristics');
   const [error, setError] = useState<string>();
   const writable = canWrite(getUser(), 'MANAGER');
-  const [editing, setEditing] = useState<number>();
-  const [draft, setDraft] = useState({ name: '', code: '', dataType: 'STRING' });
+  const [editing, setEditing] = useState<number | 'new'>();
+  const [deleting, setDeleting] = useState<number>();
+  const [draft, setDraft] = useState(EMPTY);
 
-  async function save(id: number) {
+  async function run(fn: () => Promise<unknown>) {
     setError(undefined);
-    try { await api(`/characteristics/${id}`, { method: 'PATCH', body: { ...draft, code: draft.code.toUpperCase() } }); setEditing(undefined); reload(); }
-    catch (err) { setError((err as Error).message); }
+    try { await fn(); setEditing(undefined); setDeleting(undefined); reload(); } catch (err) { setError((err as Error).message); }
   }
+  const body = () => ({ ...draft, code: draft.code.toUpperCase() });
+  const add = (e: FormEvent) => { e.preventDefault(); run(() => api('/characteristics', { method: 'POST', body: body() })); };
+  const typeSelect = (
+    <Select aria-label="Type" value={draft.dataType} onChange={(e) => setDraft({ ...draft, dataType: e.target.value })}>
+      {Object.entries(TYPES).map(([v, l]) => <option key={v} value={v}>{l}</option>)}
+    </Select>
+  );
 
-  async function add(e: FormEvent<HTMLFormElement>) {
-    e.preventDefault(); const form = e.currentTarget; const f = new FormData(form);
-    setError(undefined);
-    try {
-      await api('/characteristics', { method: 'POST', body: { name: f.get('name'), code: (f.get('code') as string).toUpperCase(), dataType: f.get('dataType') } });
-      form.reset(); reload();
-    } catch (err) { setError((err as Error).message); }
-  }
-  async function del(c: any) {
-    if (!confirm(`Supprimer « ${c.name} » ?`)) return;
-    setError(undefined);
-    try { await api(`/characteristics/${c.id}`, { method: 'DELETE' }); reload(); } catch (err) { setError((err as Error).message); }
-  }
-
+  if (loading) return <Loading />;
   return (
     <>
-      <ErrorText>{error}</ErrorText>
-      {writable && (
+      <div className="-mt-2 flex flex-wrap items-center justify-between gap-3">
+        <p className="max-w-2xl text-[13px] text-ink-muted">Les caractéristiques décrivent les matières (couleur, composition, largeur…). Le type contrôle la saisie sur la fiche matière.</p>
+        {writable && editing !== 'new' && <Button variant="secondary" onClick={() => { setEditing('new'); setDraft(EMPTY); setError(undefined); }}><IconPlus />Nouvelle caractéristique</Button>}
+      </div>
+      <ErrorText>{error ?? loadError}</ErrorText>
+
+      {editing === 'new' && (
         <Card title="Nouvelle caractéristique">
-          <form onSubmit={add} className="grid grid-cols-1 items-end gap-2 sm:grid-cols-4">
-            <Field label="Nom"><Input name="name" required maxLength={100} /></Field>
-            <Field label="Code"><Input name="code" required maxLength={50} pattern="[A-Za-z0-9_]+" placeholder="COULEUR" /></Field>
-            <Field label="Type"><Select name="dataType">{Object.entries(TYPES).map(([v, l]) => <option key={v} value={v}>{l}</option>)}</Select></Field>
+          <form onSubmit={add} className="flex flex-wrap items-end gap-3">
+            <div className="w-56"><Field label="Nom"><Input required maxLength={100} placeholder="Couleur" value={draft.name} onChange={(e) => setDraft({ ...draft, name: e.target.value })} /></Field></div>
+            <div className="w-44"><Field label="Code"><Input required maxLength={50} pattern="[A-Za-z0-9_]+" placeholder="COULEUR" className="font-mono text-[13px]" value={draft.code} onChange={(e) => setDraft({ ...draft, code: e.target.value })} /></Field></div>
+            <div className="w-40"><Field label="Type">{typeSelect}</Field></div>
+            <Button type="button" variant="ghost" onClick={() => setEditing(undefined)}>Annuler</Button>
             <Button>Ajouter</Button>
           </form>
         </Card>
       )}
-      <Card>
+
+      <Card flush>
         <Table head={['Nom', 'Code', 'Type', '']}>
-          {data?.map((c) => editing === c.id ? (
-            <tr key={c.id}>
-              <td><Input value={draft.name} maxLength={100} onChange={(e) => setDraft({ ...draft, name: e.target.value })} /></td>
-              <td><Input value={draft.code} maxLength={50} onChange={(e) => setDraft({ ...draft, code: e.target.value })} /></td>
-              <td><Select value={draft.dataType} onChange={(e) => setDraft({ ...draft, dataType: e.target.value })}>{Object.entries(TYPES).map(([v, l]) => <option key={v} value={v}>{l}</option>)}</Select></td>
-              <td className="space-x-2 whitespace-nowrap text-right">
-                <button className="text-xs underline" onClick={() => save(c.id)}>Enregistrer</button>
-                <button className="text-xs underline" onClick={() => setEditing(undefined)}>Annuler</button>
-              </td>
-            </tr>
-          ) : (
-            <tr key={c.id}>
-              <td>{c.name}</td><td className="font-mono text-xs">{c.code}</td><td><Badge>{TYPES[c.dataType]}</Badge></td>
-              <td className="space-x-2 whitespace-nowrap text-right">{writable && <>
-                <button className="text-xs underline" onClick={() => { setEditing(c.id); setDraft({ name: c.name, code: c.code, dataType: c.dataType }); setError(undefined); }}>Modifier</button>
-                <button className="text-xs text-red-600 underline" onClick={() => del(c)}>Supprimer</button>
-              </>}</td>
-            </tr>
-          ))}
+          {data?.map((c) => {
+            if (deleting === c.id) return (
+              <ConfirmRow key={c.id} colSpan={4} onCancel={() => setDeleting(undefined)} onConfirm={() => run(() => api(`/characteristics/${c.id}`, { method: 'DELETE' }))}>
+                Supprimer « {c.name} » ? Impossible si une matière l'utilise encore.
+              </ConfirmRow>
+            );
+            if (editing === c.id) return (
+              <tr key={c.id}>
+                <td><Input aria-label="Nom" value={draft.name} maxLength={100} onChange={(e) => setDraft({ ...draft, name: e.target.value })} /></td>
+                <td><Input aria-label="Code" value={draft.code} maxLength={50} className="font-mono text-[13px]" onChange={(e) => setDraft({ ...draft, code: e.target.value })} /></td>
+                <td><div className="w-40">{typeSelect}</div></td>
+                <td className="text-right whitespace-nowrap">
+                  <Button variant="ghost" size="sm" onClick={() => setEditing(undefined)}>Annuler</Button>
+                  <Button size="sm" onClick={() => run(() => api(`/characteristics/${c.id}`, { method: 'PATCH', body: body() }))}>Enregistrer</Button>
+                </td>
+              </tr>
+            );
+            return (
+              <tr key={c.id}>
+                <td className="font-medium">{c.name}</td>
+                <td className="font-mono text-[12.5px] text-ink-muted">{c.code}</td>
+                <td><Badge plain>{TYPES[c.dataType]}</Badge></td>
+                <td>{writable && <RowActions name={c.name}
+                  onEdit={() => { setEditing(c.id); setDeleting(undefined); setDraft({ name: c.name, code: c.code, dataType: c.dataType }); setError(undefined); }}
+                  onDelete={() => { setDeleting(c.id); setEditing(undefined); }} />}</td>
+              </tr>
+            );
+          })}
         </Table>
+        {data?.length === 0 && <p className="px-4 py-3 text-sm text-ink-muted">Aucune caractéristique.</p>}
       </Card>
     </>
   );

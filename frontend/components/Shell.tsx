@@ -3,6 +3,7 @@ import Link from 'next/link';
 import { usePathname, useRouter } from 'next/navigation';
 import { ComponentType, ReactNode, useEffect, useState } from 'react';
 import { SessionUser, api, clearSession, getUser } from '@/lib/api';
+import { ROLE_LABEL } from '@/lib/format';
 import {
   IconCart, IconClose, IconDashboard, IconFactory, IconLogout, IconMaterial, IconMenu, IconProduct, IconReport, IconSettings, IconStock,
 } from './icons';
@@ -14,7 +15,6 @@ const nav: [string, string, ComponentType<{ size?: number }>][] = [
   ['/reports', 'Rapports', IconReport], ['/settings', 'Paramètres', IconSettings],
 ];
 
-const ROLE_LABEL: Record<SessionUser['role'], string> = { ADMIN: 'Administrateur', MANAGER: 'Responsable', OPERATOR: 'Opérateur', VIEWER: 'Lecture seule' };
 
 /** Pages that only some roles may open (the API enforces the same rules; this just avoids showing dead forms). */
 const RESTRICTED: [RegExp, SessionUser['role']][] = [

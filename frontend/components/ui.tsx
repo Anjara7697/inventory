@@ -22,7 +22,7 @@ export function Button({ variant = 'primary', size = 'md', className, ...p }: Bu
   return <button {...p} className={cx(buttonClass(variant, size), className)} />;
 }
 
-const field = 'h-[38px] w-full rounded-lg border border-line-strong bg-surface px-3 text-sm text-ink placeholder:text-ink-muted focus:border-accent focus:outline-2 focus:outline-offset-1 focus:outline-accent aria-[invalid=true]:border-danger';
+const field = 'h-[38px] w-full rounded-lg border border-line-strong bg-surface px-3 text-sm text-ink placeholder:text-ink-muted focus:border-accent focus:outline-2 focus:outline-offset-1 focus:outline-accent aria-[invalid=true]:border-danger disabled:cursor-not-allowed disabled:bg-sunken disabled:text-ink-muted';
 export const Input = (p: ComponentProps<'input'>) => <input {...p} className={cx(field, p.type === 'checkbox' && 'h-4 w-4', p.className)} />;
 export const Select = (p: ComponentProps<'select'>) => <select {...p} className={cx(field, p.className)} />;
 export const Textarea = (p: TextareaHTMLAttributes<HTMLTextAreaElement>) => <textarea {...p} className={cx(field, 'h-auto py-2.5 leading-[22px]', p.className)} />;
