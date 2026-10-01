@@ -24,3 +24,17 @@ export const dateTime = (iso: string) =>
 
 /** Production reference, same format as the backend (stock movements carry it). */
 export const productionRef = (id: number) => `PROD-${String(id).padStart(5, '0')}`;
+
+/** Purchase order statuses: label and badge tone. */
+export const PURCHASE_STATUS: Record<string, [string, 'gray' | 'amber' | 'green' | 'red']> = {
+  DRAFT: ['Brouillon', 'gray'], ORDERED: ['Commandée', 'amber'], RECEIVED: ['Reçue', 'green'], CANCELLED: ['Annulée', 'red'],
+};
+export const purchaseRef = (id: number) => `PO-${String(id).padStart(5, '0')}`;
+
+/** Total of the priced lines of a purchase order (lines without price count 0). */
+export const orderTotal = (o: { lines: { unitPrice?: string | number | null; quantity: string | number }[] }) =>
+  o.lines.reduce((t, l) => t + (l.unitPrice == null ? 0 : Number(l.unitPrice) * Number(l.quantity)), 0);
+
+/** "29 sept." */
+export const shortDate = (iso: string | null | undefined) =>
+  iso ? new Date(iso).toLocaleDateString('fr-FR', { day: 'numeric', month: 'short' }) : '—';
