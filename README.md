@@ -48,6 +48,10 @@ docker compose up --build        # première fois : quelques minutes
 Interface : http://localhost:3000 · API / Swagger : http://localhost:3001/docs. Le conteneur de l'API applique les migrations et le seed au démarrage (exemple « Pantalon Jean » inclus ; `SEED_DEMO=false docker compose up` pour démarrer vide). `docker compose down -v` efface aussi les données.
 Si tu accèdes à l'application depuis une autre machine que celle qui exécute Docker, définis `PUBLIC_API_URL` (ex. `http://192.168.1.20:3001`) avant `docker compose up --build`.
 
+## Production (VPS)
+
+`docker-compose.prod.yml` + `deploy/Caddyfile` : HTTPS automatique (Caddy / Let's Encrypt), interface sur `https://DOMAIN`, API sur `https://DOMAIN/api`, base et API non exposées. Réglages dans `.env.production` (modèle : `.env.production.example`). Sauvegarde : `deploy/backup.sh` ; mise à jour : `deploy/update.sh`. Guide pas à pas (VPS Contabo, Ubuntu 24.04) : [docs/deploiement.md](docs/deploiement.md).
+
 ## Tests
 
 ```bash
