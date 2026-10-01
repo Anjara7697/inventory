@@ -1,6 +1,7 @@
 'use client';
 import { useRouter } from 'next/navigation';
 import { FormEvent, useState } from 'react';
+import { LogoMark } from '@/components/Logo';
 import { Button, ErrorText, Field, Input } from '@/components/ui';
 import { ApiError, api, saveSession } from '@/lib/api';
 
@@ -9,7 +10,7 @@ const BINS = [0.7, 0.9, 0.3, 0.6, 1, 0.75, 0.85, 0.15, 0.55, 0.95, 0.4, 0.8];
 
 const Brand = ({ inverse }: { inverse?: boolean }) => (
   <div className="flex items-center gap-2.5 text-base font-semibold">
-    <span aria-hidden className={inverse ? 'h-[22px] w-[22px] rounded-md bg-on-accent' : 'h-[22px] w-[22px] rounded-md bg-accent'} />Inventory
+    <LogoMark inverse={inverse} />Inventory
   </div>
 );
 
