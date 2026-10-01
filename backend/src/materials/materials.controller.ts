@@ -13,10 +13,10 @@ export class MaterialsController {
 
   @Get() findAll(
     @Res({ passthrough: true }) res: Response,
-    @Query('search') search?: string, @Query('includeInactive') inactive?: string,
+    @Query('search') search?: string, @Query('includeInactive') inactive?: string, @Query('belowThreshold') below?: string,
     @Query('limit') limit?: string, @Query('offset') offset?: string,
   ) {
-    const q = { search, includeInactive: inactive === 'true', ...parsePage(limit, offset) };
+    const q = { search, includeInactive: inactive === 'true', belowThreshold: below === 'true', ...parsePage(limit, offset) };
     return withTotal(res, q, () => this.svc.findAll(q), () => this.svc.count(q));
   }
   @Get(':id') findOne(@Param('id', ParseIntPipe) id: number) { return this.svc.findOne(id); }

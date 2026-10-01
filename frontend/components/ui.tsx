@@ -49,7 +49,7 @@ export const Breadcrumb = ({ items }: { items: [string, string?][] }) => (
 
 export function Field({ label, hint, children }: { label: string; hint?: ReactNode; children: ReactNode }) {
   return (
-    <label className="grid gap-1.5">
+    <label className="grid content-start gap-1.5">
       <span className="text-[13px] font-medium text-ink">{label}</span>
       {children}
       {hint && <span className="text-xs text-ink-muted">{hint}</span>}
@@ -124,6 +124,18 @@ export const Table = ({ head, children }: { head: string[]; children: ReactNode 
     </table>
   </div>
 );
+
+/** Stock level bar; the vertical tick marks the minimum. Scale = maximum if set, else twice the minimum (or the quantity). */
+export function StockGauge({ quantity, minimum, maximum, tone, className }: { quantity: number; minimum: number; maximum?: number | null; tone: 'green' | 'amber' | 'red'; className?: string }) {
+  const scale = Math.max(Number(maximum) || minimum * 2 || quantity, quantity, 1);
+  return (
+    <div className={cx('relative h-1.5 rounded-full bg-sunken', className)} role="presentation">
+      <span className={cx('absolute inset-y-0 left-0 rounded-full', tone === 'green' && 'bg-success', tone === 'amber' && 'bg-warning', tone === 'red' && 'bg-danger')}
+        style={{ width: `${Math.min(100, (quantity / scale) * 100)}%` }} />
+      {minimum > 0 && <span className="absolute -top-[3px] h-3 w-0.5 rounded-sm bg-ink-muted" style={{ left: `${(minimum / scale) * 100}%` }} />}
+    </div>
+  );
+}
 
 export const Sku = ({ children }: { children: ReactNode }) => <span className="font-mono text-[12.5px] whitespace-nowrap text-ink-muted">{children}</span>;
 

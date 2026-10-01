@@ -6,7 +6,7 @@ import { canWrite } from '@/components/Shell';
 import { Badge, Card, ErrorText, Loading, PageHeader, Sku, Stat, Table, buttonClass, cx } from '@/components/ui';
 import { api, apiList, getUser, money, num } from '@/lib/api';
 import { useApi } from '@/lib/hooks';
-import { stockState } from '@/lib/stock';
+import { purchaseLink, reorderQuantity, stockState } from '@/lib/stock';
 
 const MOVE_LABEL: Record<string, string> = {
   ENTRY: 'Entrée', EXIT: 'Sortie', PRODUCTION: 'Production', LOSS: 'Perte', RETURN: 'Retour', ADJUSTMENT: 'Ajustement',
@@ -58,9 +58,8 @@ export default function Dashboard() {
 
   const orderLink = (a: any) => {
     const m = matById.get(a.materialId);
-    const target = Number(m?.maximumQuantity ?? 0) || Number(a.minimumQuantity) * 2;
-    const qty = Math.max(target - Number(a.quantity), Number(a.minimumQuantity), 1);
-    return `/purchases/new?lines=${a.materialId}:${qty}:${m?.material.unitId}`;
+    const qty = reorderQuantity(Number(a.quantity), Number(a.minimumQuantity), m?.maximumQuantity);
+    return purchaseLink([{ materialId: a.materialId, quantity: qty, unitId: m?.material.unitId }]);
   };
 
   return (
@@ -95,7 +94,10 @@ export default function Dashboard() {
                 return (
                   <tr key={`${a.kind}-${a.materialId ?? a.productId}`}>
                     <td>
-                      <div className="flex flex-wrap items-center gap-2 font-medium">{a.name}{!isMat && <Badge plain>Produit fini</Badge>}</div>
+                      <div className="flex flex-wrap items-center gap-2 font-medium">
+                        <Link href={isMat ? `/materials/${a.materialId}` : `/products/${a.productId}`} className="hover:text-accent hover:underline">{a.name}</Link>
+                        {!isMat && <Badge plain>Produit fini</Badge>}
+                      </div>
                       {sku && <Sku>{sku}</Sku>}
                     </td>
                     <td className="text-right tabular-nums">{num(a.quantity)} {a.unit}</td>

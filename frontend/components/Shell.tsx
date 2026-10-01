@@ -19,7 +19,7 @@ const ROLE_LABEL: Record<SessionUser['role'], string> = { ADMIN: 'Administrateur
 /** Pages that only some roles may open (the API enforces the same rules; this just avoids showing dead forms). */
 const RESTRICTED: [RegExp, SessionUser['role']][] = [
   [/^\/products\/new$/, 'MANAGER'], [/^\/products\/\d+\/edit$/, 'MANAGER'],
-  [/^\/materials\/new$/, 'MANAGER'], [/^\/materials\/\d+$/, 'MANAGER'],
+  [/^\/materials\/new$/, 'MANAGER'], [/^\/materials\/\d+\/edit$/, 'MANAGER'],
   [/^\/purchases\/new$/, 'MANAGER'], [/^\/purchases\/\d+\/edit$/, 'MANAGER'],
   [/^\/reports/, 'MANAGER'],
   [/^\/settings\/users/, 'ADMIN'],

@@ -111,6 +111,13 @@ describe('Inventory API (e2e)', () => {
     // a compatible unit (cm for a fabric in m) is accepted
     const upd = await http.put(`/products/${p.id}/bom`).set(auth(admin)).send({ lines: [{ materialId: tissu.id, quantity: 250, unitId: cm.id }] }).expect(200);
     expect(upd.body).toHaveLength(1);
+
+    // the material detail lists the products using it
+    const detail = (await http.get(`/materials/${tissu.id}`).set(auth(admin)).expect(200)).body;
+    expect(detail.products.map((l: any) => l.product.sku)).toEqual(['PAN-JEAN-001']);
+    // below threshold = at or under a positive minimum, or empty (both are empty here)
+    const below = (await http.get('/materials?belowThreshold=true').set(auth(admin)).expect(200)).body;
+    expect(below.map((x: any) => x.sku).sort()).toEqual(['FERM-001', 'TIS-JEAN-001']);
   });
 
   it('refuses to change the unit of a material used in a BOM, and deactivates instead of deleting', async () => {

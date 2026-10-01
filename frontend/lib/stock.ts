@@ -16,3 +16,17 @@ export const bomUnitCost = (lines: { quantity: string | number; unit: any; mater
 export const PRODUCTION_STATUS: Record<string, [string, 'green' | 'red' | 'gray' | 'amber']> = {
   COMPLETED: ['Terminée', 'green'], CANCELLED: ['Annulée', 'gray'], PENDING: ['En attente', 'gray'], IN_PROGRESS: ['En cours', 'amber'],
 };
+
+/** Quantity to order to bring a material back up: to its maximum if set, else to twice its minimum (at least 1). */
+export const reorderQuantity = (quantity: number, minimum: number, maximum?: number | null) =>
+  Math.max((Number(maximum) || minimum * 2) - quantity, minimum, 1);
+
+/** /purchases/new pre-filled with one line per material (materialId:quantity:unitId). */
+export const purchaseLink = (lines: { materialId: number; quantity: number; unitId: number }[]) =>
+  `/purchases/new?lines=${lines.map((l) => `${l.materialId}:${l.quantity}:${l.unitId}`).join(',')}`;
+
+/** Display value of a material characteristic: numbers in French format, booleans as Oui/Non. */
+export const characteristicValue = (c: { value: string; characteristic: { dataType: string } }) =>
+  c.characteristic.dataType === 'BOOLEAN' ? (c.value === 'true' ? 'Oui' : 'Non')
+    : c.characteristic.dataType === 'NUMBER' && c.value !== '' && !Number.isNaN(Number(c.value)) ? Number(c.value).toLocaleString('fr-FR')
+      : c.value;

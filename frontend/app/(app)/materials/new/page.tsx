@@ -1,6 +1,13 @@
 'use client';
 import { MaterialForm } from '@/components/MaterialForm';
+import { Breadcrumb, PageHeader } from '@/components/ui';
 
 export default function NewMaterial() {
-  return (<><h1 className="text-xl font-semibold">Nouvelle matière</h1><MaterialForm /></>);
+  return (
+    <>
+      <Breadcrumb items={[['Matières', '/materials'], ['Nouvelle matière']]} />
+      <PageHeader title="Nouvelle matière" />
+      <MaterialForm />
+    </>
+  );
 }

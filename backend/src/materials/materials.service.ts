@@ -6,7 +6,7 @@ import {
   CreateMaterialDto, MaterialCharacteristicDto, SetCharacteristicsDto, UpdateMaterialDto,
 } from './materials.dto';
 
-export interface ListQuery extends PageQuery { search?: string; includeInactive?: boolean }
+export interface ListQuery extends PageQuery { search?: string; includeInactive?: boolean; belowThreshold?: boolean }
 
 const include = {
   unit: { include: { category: true } },
@@ -21,6 +21,17 @@ export class MaterialsService {
   private where(q: ListQuery): Prisma.MaterialWhereInput {
     return {
       ...(q.includeInactive ? {} : { active: true }),
+      // Same rule as InventoryService.alerts(): at or under a positive minimum, or empty.
+      ...(q.belowThreshold && {
+        stock: {
+          is: {
+            OR: [
+              { minimumQuantity: { gt: 0 }, quantity: { lte: this.prisma.materialStock.fields.minimumQuantity } },
+              { quantity: { lte: 0 } },
+            ],
+          },
+        },
+      }),
       ...(q.search && {
         OR: [
           { name: { contains: q.search, mode: 'insensitive' } },
@@ -39,7 +50,14 @@ export class MaterialsService {
   }
 
   async findOne(id: number) {
-    const m = await this.prisma.material.findUnique({ where: { id }, include });
+    const m = await this.prisma.material.findUnique({
+      where: { id },
+      include: {
+        ...include,
+        // products whose bill of materials uses this material ("Utilisée dans")
+        products: { include: { product: { select: { id: true, name: true, sku: true, active: true } }, unit: true }, orderBy: { productId: 'asc' } },
+      },
+    });
     if (!m) throw new NotFoundException('Material not found');
     return m;
   }
