@@ -1,0 +1,67 @@
+# Deploys to the VPS after CI passes on main (or manually from the Actions tab).
+# Setup: docs/deploiement.md, step 12 "Déploiement automatique".
+name: Deploy
+
+on:
+  workflow_run:
+    workflows: [CI]
+    types: [completed]
+    branches: [main]
+  workflow_dispatch:
+
+# Deployments run one after another, never in parallel, and never get cancelled halfway.
+concurrency:
+  group: production
+  cancel-in-progress: false
+
+permissions:
+  contents: read
+
+jobs:
+  deploy:
+    if: >-
+      (github.event_name == 'workflow_dispatch' && github.ref == 'refs/heads/main') ||
+      (github.event.workflow_run.conclusion == 'success' &&
+       github.event.workflow_run.event == 'push' &&
+       github.event.workflow_run.head_repository.full_name == github.repository)
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    environment:
+      name: production
+      url: https://${{ vars.DOMAIN }}
+    env:
+      SHA: ${{ github.event.workflow_run.head_sha || github.sha }}
+      DOMAIN: ${{ vars.DOMAIN }}
+      TARGET: ${{ vars.VPS_USER || 'deploy' }}@${{ vars.VPS_HOST }}
+    steps:
+      - name: Configure SSH
+        env:
+          SSH_KEY: ${{ secrets.VPS_SSH_KEY }}
+          KNOWN_HOSTS: ${{ secrets.VPS_KNOWN_HOSTS }}
+        run: |
+          install -m 700 -d ~/.ssh
+          printf '%s\n' "$SSH_KEY" > ~/.ssh/deploy_key
+          printf '%s\n' "$KNOWN_HOSTS" > ~/.ssh/known_hosts
+          chmod 600 ~/.ssh/deploy_key ~/.ssh/known_hosts
+
+      - name: Deploy ${{ env.SHA }}
+        run: |
+          ssh -i ~/.ssh/deploy_key -o BatchMode=yes -o StrictHostKeyChecking=yes \
+              -o ServerAliveInterval=30 "$TARGET" "$SHA"
+
+      - name: Check the site responds
+        run: |
+          for i in $(seq 1 24); do
+            web=$(curl -s -o /dev/null -w '%{http_code}' "https://$DOMAIN/login" || true)
+            api=$(curl -s -o /dev/null -w '%{http_code}' "https://$DOMAIN/api/auth/me" || true)
+            echo "interface: $web  api: $api"
+            # The API answers 401 to an anonymous request: that means it is up.
+            if [ "$web" = 200 ] && [ "$api" = 401 ]; then exit 0; fi
+            sleep 5
+          done
+          echo "::error::The site does not respond correctly after deployment. Check 'dc ps' and 'dc logs' on the VPS."
+          exit 1
+
+      - name: Remove the key
+        if: always()
+        run: rm -f ~/.ssh/deploy_key
