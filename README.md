@@ -10,9 +10,12 @@ mouvements de stock et production (voir les documents de conception, MCD et MLD)
 | 1 — Fondations | Docker, PostgreSQL, Prisma, NestJS, auth JWT + refresh, utilisateurs | ✅ backend |
 | 2 — Référentiel | Produits, matières, unités, catégories d'unités, caractéristiques | ✅ backend |
 | 3 — Nomenclature | BOM via `/products/:id/bom` | ✅ backend |
-| 4-7 — Stock, production, approvisionnement, dashboard | | à faire |
+| 4 — Stock | Stocks matières/produits, mouvements, seuils et alertes | ✅ backend |
+| 5 — Production | Capacité, vérification, besoins, production transactionnelle | ✅ backend |
+| 6 — Approvisionnement | « À acheter » via `material-requirements` ; fournisseurs / commandes | partiel |
+| 7 — Dashboard, rapports | | à faire |
 
-Le schéma Prisma couvre déjà tout le MLD (stocks, mouvements, productions). Le frontend Next.js n'est pas encore initialisé.
+Le frontend Next.js n'est pas encore initialisé.
 
 ## Démarrage
 
@@ -45,3 +48,10 @@ npm run test:e2e    # API + PostgreSQL — DATABASE_URL doit viser une base jeta
 - L'unité d'une matière ne peut plus changer dès qu'elle est utilisée dans une nomenclature ou a un historique.
 - Supprimer une matière/produit référencé le désactive (`active = false`).
 - Contraintes SQL `CHECK` (quantités et facteurs > 0, mouvement lié à une matière ou un produit) dans la migration.
+
+### Stock et production
+
+- Le stock courant est une valeur mise à jour **en même temps** qu'un mouvement signé (`ENTRY`/`RETURN` +, `EXIT`/`LOSS` −, `ADJUSTMENT` signé, réservé aux managers). Les quantités sont converties dans l'unité du stock : l'historique somme toujours au stock. Un stock ne devient jamais négatif (409), y compris en cas d'appels concurrents (`UPDATE` gardé).
+- `POST /production` (entier > 0) : lit la nomenclature, vérifie, retire les matières, ajoute les produits finis, écrit les mouvements (`reference = PROD-00042`) et la production dans **une seule transaction** ; en cas de manque, 409 avec la liste des matières manquantes et rien n'est modifié.
+- `GET /products/:id/production-capacity` : production maximale et matière limitante. `POST /products/:id/check-production` et `/material-requirements` (`{quantity}`) : faisabilité, manquants et quantités à acheter.
+- `GET /inventory/alerts` : `LOW_STOCK` (≤ seuil minimum) et `OUT_OF_STOCK`. Les produits finis sont comptés en `PCS` (l'unité `PCS` doit exister, ce que fait le seed).

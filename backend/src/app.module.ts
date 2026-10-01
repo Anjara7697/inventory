@@ -6,9 +6,11 @@ import { JwtAuthGuard } from './auth/jwt-auth.guard';
 import { CharacteristicsModule } from './characteristics/characteristics.module';
 import { PrismaExceptionFilter } from './common/prisma-exception.filter';
 import { RolesGuard } from './common/roles';
+import { InventoryModule } from './inventory/inventory.module';
 import { MaterialsModule } from './materials/materials.module';
 import { PrismaModule } from './prisma/prisma.module';
 import { ProductsModule } from './products/products.module';
+import { ProductionModule } from './production/production.module';
 import { UnitsModule } from './units/units.module';
 import { UsersModule } from './users/users.module';
 
@@ -22,6 +24,8 @@ import { UsersModule } from './users/users.module';
     CharacteristicsModule,
     MaterialsModule,
     ProductsModule,
+    InventoryModule,
+    ProductionModule,
   ],
   providers: [
     { provide: APP_GUARD, useClass: JwtAuthGuard },
