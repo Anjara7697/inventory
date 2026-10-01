@@ -55,6 +55,9 @@
     --danger-soft: #3d1a17;
     --elev-card: none;
     --elev-pop: 0 8px 32px rgba(0, 0, 0, 0.5);
+    --series-1: #6a80ea; /* accent is too light for chart marks on the dark surface (validated) */
+    --chart-grid: var(--border);
+    --chart-axis: var(--ink-muted);
   }
 }
 
