@@ -1,3 +1,5 @@
+# Whole stack:  docker compose up --build        (UI http://localhost:3000, API http://localhost:3001/docs)
+# Database only: docker compose up -d postgres   (for local development without containers for the app)
 services:
   postgres:
     image: postgres:16-alpine
@@ -20,8 +22,17 @@ services:
       DATABASE_URL: postgresql://inventory:inventory@postgres:5432/inventory?schema=public
       JWT_ACCESS_SECRET: ${JWT_ACCESS_SECRET:-change-me-access}
       JWT_REFRESH_SECRET: ${JWT_REFRESH_SECRET:-change-me-refresh}
+      SEED_DEMO: ${SEED_DEMO:-true}   # load the "Pantalon Jean" example; set to false for an empty start
       PORT: 3001
     ports: ["3001:3001"]
+
+  frontend:
+    build:
+      context: ./frontend
+      args:
+        NEXT_PUBLIC_API_URL: ${PUBLIC_API_URL:-http://localhost:3001}
+    depends_on: [backend]
+    ports: ["3000:3000"]
 
 volumes:
   pgdata:

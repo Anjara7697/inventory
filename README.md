@@ -38,7 +38,14 @@ cp .env.example .env.local   # NEXT_PUBLIC_API_URL
 npm install && npm run dev   # http://localhost:3000
 ```
 
-Tout en Docker (API + base) : `docker compose up --build`.
+**Tout en Docker (le plus simple)** :
+
+```bash
+docker compose up --build        # première fois : quelques minutes
+```
+
+Interface : http://localhost:3000 · API / Swagger : http://localhost:3001/docs. Le conteneur de l'API applique les migrations et le seed au démarrage (exemple « Pantalon Jean » inclus ; `SEED_DEMO=false docker compose up` pour démarrer vide). `docker compose down -v` efface aussi les données.
+Si tu accèdes à l'application depuis une autre machine que celle qui exécute Docker, définis `PUBLIC_API_URL` (ex. `http://192.168.1.20:3001`) avant `docker compose up --build`.
 
 ## Tests
 
