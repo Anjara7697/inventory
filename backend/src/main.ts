@@ -6,7 +6,7 @@ import { configureApp } from './setup';
 async function bootstrap() {
   const app = await NestFactory.create(AppModule);
   configureApp(app);
-  app.enableCors();
+  app.enableCors({ exposedHeaders: ['X-Total-Count'] });
 
   const doc = SwaggerModule.createDocument(
     app,

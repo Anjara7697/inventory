@@ -1,8 +1,13 @@
 import { BadRequestException, ConflictException, Injectable, NotFoundException } from '@nestjs/common';
 import { Prisma, StockMovementType } from '@prisma/client';
+import { PageQuery } from '../common/paging';
 import { PrismaService } from '../prisma/prisma.service';
 import { UnitsService, convertQuantity } from '../units/units.service';
 import { CreateStockMovementDto } from './inventory.dto';
+
+export interface MovementFilter extends PageQuery {
+  materialId?: number; productId?: number; reference?: string; type?: StockMovementType; from?: Date; to?: Date;
+}
 
 export type Tx = Prisma.TransactionClient;
 const D = (v: Prisma.Decimal.Value) => new Prisma.Decimal(v);
@@ -48,14 +53,25 @@ export class InventoryService {
       }));
   }
 
-  movements(filter: { materialId?: number; productId?: number; reference?: string; limit?: number; offset?: number }) {
+  private movementWhere(f: MovementFilter): Prisma.StockMovementWhereInput {
+    return {
+      materialId: f.materialId, productId: f.productId, reference: f.reference, type: f.type,
+      ...((f.from || f.to) && { createdAt: { gte: f.from, lte: f.to } }),
+    };
+  }
+
+  movements(f: MovementFilter) {
     return this.prisma.stockMovement.findMany({
-      where: { materialId: filter.materialId, productId: filter.productId, reference: filter.reference },
+      where: this.movementWhere(f),
       include: { unit: true, material: { select: { id: true, name: true } }, product: { select: { id: true, name: true } }, user: { select: { id: true, firstName: true, lastName: true } } },
       orderBy: { id: 'desc' },
-      take: Math.min(filter.limit ?? 50, 200),
-      skip: filter.offset ?? 0,
+      take: f.limit ?? 50,
+      skip: f.offset,
     });
+  }
+
+  countMovements(f: MovementFilter) {
+    return this.prisma.stockMovement.count({ where: this.movementWhere(f) });
   }
 
   async updateThresholds(materialId: number, min?: number, max?: number) {
@@ -101,10 +117,12 @@ export class InventoryService {
   async applyMovement(
     tx: Tx,
     m: { type: StockMovementType; materialId?: number; productId?: number; quantity: Prisma.Decimal; unitId?: number; userId: number; reason?: string; reference?: string },
+    /** reversals and goods receipts must work even if the item was deactivated in the meantime */
+    opts: { allowInactive?: boolean } = {},
   ) {
     const target = m.materialId
-      ? await this.materialTarget(tx, m.materialId)
-      : await this.productTarget(tx, m.productId!);
+      ? await this.materialTarget(tx, m.materialId, opts.allowInactive)
+      : await this.productTarget(tx, m.productId!, opts.allowInactive);
     const given = m.unitId ? await tx.unit.findUnique({ where: { id: m.unitId } }) : target.unit;
     if (!given) throw new BadRequestException(`Unit ${m.unitId} does not exist`);
     const delta = convertQuantity(m.quantity, given, target.unit);
@@ -123,17 +141,17 @@ export class InventoryService {
     });
   }
 
-  private async materialTarget(tx: Tx, id: number) {
+  private async materialTarget(tx: Tx, id: number, allowInactive = false) {
     const m = await tx.material.findUnique({ where: { id }, include: { unit: true } });
     if (!m) throw new BadRequestException(`Material ${id} does not exist`);
-    if (!m.active) throw new BadRequestException(`Material ${m.sku} is inactive`);
+    if (!m.active && !allowInactive) throw new BadRequestException(`Material ${m.sku} is inactive`);
     return { unit: m.unit, label: m.name };
   }
 
-  private async productTarget(tx: Tx, id: number) {
+  private async productTarget(tx: Tx, id: number, allowInactive = false) {
     const p = await tx.product.findUnique({ where: { id } });
     if (!p) throw new BadRequestException(`Product ${id} does not exist`);
-    if (!p.active) throw new BadRequestException(`Product ${p.sku} is inactive`);
+    if (!p.active && !allowInactive) throw new BadRequestException(`Product ${p.sku} is inactive`);
     const unit = await tx.unit.findUnique({ where: { code: 'PCS' } });
     if (!unit) throw new BadRequestException('Unit PCS is missing (run the seed)');
     return { unit, label: p.name };

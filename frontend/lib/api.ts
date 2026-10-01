@@ -34,23 +34,35 @@ function refresh(): Promise<boolean> {
   return refreshing;
 }
 
-export async function api<T = any>(path: string, init: { method?: string; body?: unknown; auth?: boolean } = {}, retry = true): Promise<T> {
+type Init = { method?: string; body?: unknown; auth?: boolean };
+
+async function request(path: string, init: Init, retry = true): Promise<{ data: any; res: Response }> {
   const headers: Record<string, string> = { 'content-type': 'application/json' };
   const token = store.get('accessToken');
   if (init.auth !== false && token) headers.authorization = `Bearer ${token}`;
   const res = await fetch(`${API}${path}`, { method: init.method ?? 'GET', headers, body: init.body === undefined ? undefined : JSON.stringify(init.body) });
-  if (res.status === 401 && init.auth !== false && retry && (await refresh())) return api<T>(path, init, false);
+  if (res.status === 401 && init.auth !== false && retry && (await refresh())) return request(path, init, false);
   if (res.status === 401 && init.auth !== false) {
     clearSession();
     if (typeof window !== 'undefined') window.location.href = '/login';
   }
-  if (res.status === 204) return undefined as T;
+  if (res.status === 204) return { data: undefined, res };
   const data = await res.json().catch(() => null);
   if (!res.ok) {
     const m = data?.message;
     throw new ApiError(res.status, Array.isArray(m) ? m.join(', ') : (typeof m === 'string' ? m : res.statusText), data);
   }
-  return data as T;
+  return { data, res };
+}
+
+export async function api<T = any>(path: string, init: Init = {}): Promise<T> {
+  return (await request(path, init)).data as T;
+}
+
+/** GET a paginated list: items + total from the X-Total-Count header. */
+export async function apiList<T = any>(path: string): Promise<{ items: T[]; total: number }> {
+  const { data, res } = await request(path, {});
+  return { items: data as T[], total: Number(res.headers.get('X-Total-Count') ?? (data as T[]).length) };
 }
 
 export const num = (v: string | number | null | undefined, digits = 3) =>

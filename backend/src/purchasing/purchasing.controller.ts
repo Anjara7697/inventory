@@ -1,4 +1,6 @@
-import { BadRequestException, Body, Controller, Delete, Get, HttpCode, Param, ParseIntPipe, Patch, Post, Query } from '@nestjs/common';
+import { BadRequestException, Body, Controller, Delete, Get, HttpCode, Param, ParseIntPipe, Patch, Post, Query, Res } from '@nestjs/common';
+import { Response } from 'express';
+import { parseId, parsePage, withTotal } from '../common/paging';
 import { ApiBearerAuth, ApiTags } from '@nestjs/swagger';
 import { PurchaseOrderStatus } from '@prisma/client';
 import { AuthUser, CurrentUser, Roles } from '../common/roles';
@@ -17,9 +19,14 @@ export class PurchasingController {
   @Roles('MANAGER') @Delete('suppliers/:id') removeSupplier(@Param('id', ParseIntPipe) id: number) { return this.svc.removeSupplier(id); }
 
   @Get('purchase-orders')
-  list(@Query('status') status?: string) {
+  list(
+    @Res({ passthrough: true }) res: Response,
+    @Query('status') status?: string, @Query('supplierId') supplierId?: string,
+    @Query('limit') limit?: string, @Query('offset') offset?: string,
+  ) {
     if (status && !(status in PurchaseOrderStatus)) throw new BadRequestException('Invalid status');
-    return this.svc.list(status as PurchaseOrderStatus | undefined);
+    const q = { status: status as PurchaseOrderStatus | undefined, supplierId: parseId(supplierId, 'supplierId'), ...parsePage(limit, offset) };
+    return withTotal(res, q, () => this.svc.list(q), () => this.svc.count(q));
   }
   @Get('purchase-orders/:id') findOne(@Param('id', ParseIntPipe) id: number) { return this.svc.findOne(id); }
   @Roles('MANAGER') @Post('purchase-orders')

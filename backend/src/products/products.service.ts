@@ -1,7 +1,10 @@
 import { BadRequestException, Injectable, NotFoundException } from '@nestjs/common';
 import { Prisma } from '@prisma/client';
+import { PageQuery } from '../common/paging';
 import { PrismaService } from '../prisma/prisma.service';
 import { BomLineDto, CreateProductDto, UpdateProductDto } from './products.dto';
+
+export interface ListQuery extends PageQuery { search?: string; includeInactive?: boolean }
 
 const include = {
   stock: true,
@@ -15,20 +18,24 @@ const include = {
 export class ProductsService {
   constructor(private prisma: PrismaService) {}
 
-  findAll(search?: string, includeInactive = false) {
-    return this.prisma.product.findMany({
-      where: {
-        ...(includeInactive ? {} : { active: true }),
-        ...(search && {
-          OR: [
-            { name: { contains: search, mode: 'insensitive' } },
-            { sku: { contains: search, mode: 'insensitive' } },
-          ],
-        }),
-      },
-      include,
-      orderBy: { id: 'asc' },
-    });
+  private where(q: ListQuery): Prisma.ProductWhereInput {
+    return {
+      ...(q.includeInactive ? {} : { active: true }),
+      ...(q.search && {
+        OR: [
+          { name: { contains: q.search, mode: 'insensitive' } },
+          { sku: { contains: q.search, mode: 'insensitive' } },
+        ],
+      }),
+    };
+  }
+
+  findAll(q: ListQuery) {
+    return this.prisma.product.findMany({ where: this.where(q), include, orderBy: { id: 'asc' }, take: q.limit, skip: q.offset });
+  }
+
+  count(q: ListQuery) {
+    return this.prisma.product.count({ where: this.where(q) });
   }
 
   async findOne(id: number) {

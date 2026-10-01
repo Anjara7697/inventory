@@ -1,19 +1,30 @@
 import { BadRequestException, ConflictException, Injectable, NotFoundException } from '@nestjs/common';
-import { Prisma } from '@prisma/client';
+import { Prisma, ProductionStatus } from '@prisma/client';
+import { PageQuery } from '../common/paging';
 import { InventoryService } from '../inventory/inventory.service';
 import { PrismaService } from '../prisma/prisma.service';
 import { PlanningService } from './planning.service';
+
+export interface ListQuery extends PageQuery { productId?: number; status?: ProductionStatus }
 
 @Injectable()
 export class ProductionService {
   constructor(private prisma: PrismaService, private inventory: InventoryService, private planning: PlanningService) {}
 
-  findAll(productId?: number) {
+  private where(q: ListQuery): Prisma.ProductionWhereInput {
+    return { productId: q.productId, status: q.status };
+  }
+
+  findAll(q: ListQuery) {
     return this.prisma.production.findMany({
-      where: { productId },
+      where: this.where(q),
       include: { product: { select: { id: true, name: true, sku: true } }, user: { select: { id: true, firstName: true, lastName: true } } },
-      orderBy: { id: 'desc' },
+      orderBy: { id: 'desc' }, take: q.limit, skip: q.offset,
     });
+  }
+
+  count(q: ListQuery) {
+    return this.prisma.production.count({ where: this.where(q) });
   }
 
   async findOne(id: number) {
@@ -91,7 +102,7 @@ export class ProductionService {
           await this.inventory.applyMovement(tx, {
             type: 'PRODUCTION', materialId: m.materialId ?? undefined, productId: m.productId ?? undefined,
             quantity: m.quantity.neg(), unitId: m.unitId, userId, reference, reason: `Cancellation of ${reference}`,
-          });
+          }, { allowInactive: true });
         } catch (e) {
           if (e instanceof ConflictException && m.productId) {
             throw new ConflictException('Cannot cancel: the finished products of this production are no longer in stock');

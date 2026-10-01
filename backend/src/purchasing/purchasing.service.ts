@@ -1,6 +1,7 @@
 import { BadRequestException, ConflictException, Injectable, NotFoundException } from '@nestjs/common';
 import { Prisma, PurchaseOrderStatus } from '@prisma/client';
 import { InventoryService } from '../inventory/inventory.service';
+import { PageQuery } from '../common/paging';
 import { PrismaService } from '../prisma/prisma.service';
 import {
   CreatePurchaseOrderDto, CreateSupplierDto, PurchaseLineDto, UpdatePurchaseOrderDto, UpdateSupplierDto,
@@ -11,6 +12,8 @@ const include = {
   user: { select: { id: true, firstName: true, lastName: true } },
   lines: { include: { material: { select: { id: true, name: true, sku: true } }, unit: true }, orderBy: { id: 'asc' } },
 } satisfies Prisma.PurchaseOrderInclude;
+
+export interface ListQuery extends PageQuery { status?: PurchaseOrderStatus; supplierId?: number }
 
 export const orderRef = (id: number) => `PO-${String(id).padStart(5, '0')}`;
 
@@ -34,8 +37,16 @@ export class PurchasingService {
   }
 
   // ---- orders ----
-  list(status?: PurchaseOrderStatus) {
-    return this.prisma.purchaseOrder.findMany({ where: { status }, include, orderBy: { id: 'desc' } });
+  private where(q: ListQuery): Prisma.PurchaseOrderWhereInput {
+    return { status: q.status, supplierId: q.supplierId };
+  }
+
+  list(q: ListQuery) {
+    return this.prisma.purchaseOrder.findMany({ where: this.where(q), include, orderBy: { id: 'desc' }, take: q.limit, skip: q.offset });
+  }
+
+  count(q: ListQuery) {
+    return this.prisma.purchaseOrder.count({ where: this.where(q) });
   }
 
   async findOne(id: number) {
@@ -93,7 +104,7 @@ export class PurchasingService {
         await this.inventory.applyMovement(tx, {
           type: 'ENTRY', materialId: l.materialId, quantity: l.quantity, unitId: l.unitId,
           userId, reference: orderRef(id), reason: 'Purchase order received',
-        });
+        }, { allowInactive: true });
       }
     });
     return this.findOne(id);

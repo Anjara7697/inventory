@@ -180,4 +180,41 @@ describe('Stock & production (e2e)', () => {
     expect(await matQty(tissu.id)).toBe(t);
     expect((await prisma.production.findUniqueOrThrow({ where: { id: made.id } })).status).toBe('COMPLETED');
   });
+
+  it('paginates and filters lists, exposing the total in X-Total-Count', async () => {
+    const all = await http.get('/materials?limit=2&offset=0').set(auth(viewer)).expect(200);
+    expect(all.body).toHaveLength(2);
+    expect(Number(all.headers['x-total-count'])).toBe(3);
+    const rest = await http.get('/materials?limit=2&offset=2').set(auth(viewer)).expect(200);
+    expect(rest.body).toHaveLength(1);
+    expect((await http.get('/materials?search=ferm').set(auth(viewer))).body.map((m: any) => m.sku)).toEqual(['FERM']);
+    expect((await http.get('/materials').set(auth(viewer))).headers['x-total-count']).toBeUndefined(); // no pagination -> no header
+
+    await http.get('/products?limit=0').set(auth(viewer)).expect(400);
+    await http.get('/products?limit=abc').set(auth(viewer)).expect(400);
+    await http.get('/stock-movements?type=NOPE').set(auth(viewer)).expect(400);
+    await http.get('/stock-movements?from=garbage').set(auth(viewer)).expect(400);
+
+    const mv = await http.get(`/stock-movements?type=PRODUCTION&materialId=${ferm.id}&limit=1`).set(auth(viewer)).expect(200);
+    expect(mv.body).toHaveLength(1);
+    expect(mv.body[0].type).toBe('PRODUCTION');
+    const total = Number(mv.headers['x-total-count']);
+    expect(total).toBe(await prisma.stockMovement.count({ where: { type: 'PRODUCTION', materialId: ferm.id } }));
+    const future = (await http.get(`/stock-movements?from=${encodeURIComponent(new Date(Date.now() + 86400000).toISOString())}`).set(auth(viewer))).body;
+    expect(future).toHaveLength(0);
+
+    const prods = await http.get('/production?status=CANCELLED&limit=10').set(auth(viewer)).expect(200);
+    expect(prods.body.every((p: any) => p.status === 'CANCELLED')).toBe(true);
+    expect(Number(prods.headers['x-total-count'])).toBe(prods.body.length);
+    await http.get('/production?status=NOPE').set(auth(viewer)).expect(400);
+  });
+
+  it('can still cancel a production after its product was deactivated', async () => {
+    await enter(tissu.id, 10).expect(201); await enter(ferm.id, 2).expect(201); await enter(bouton.id, 4).expect(201);
+    const made = (await http.post('/production').set(auth(admin)).send({ productId: pant.id, quantity: 1 }).expect(201)).body;
+    await http.delete(`/products/${pant.id}`).set(auth(admin)).expect(200); // has history -> deactivated
+    await http.post('/production').set(auth(admin)).send({ productId: pant.id, quantity: 1 }).expect(400); // no new production
+    await http.post(`/production/${made.id}/cancel`).set(auth(admin)).expect(200);
+    await http.patch(`/products/${pant.id}`).set(auth(admin)).send({ active: true }).expect(200);
+  });
 });

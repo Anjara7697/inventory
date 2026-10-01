@@ -1,9 +1,9 @@
 'use client';
 import { FormEvent, useState } from 'react';
 import { canWrite } from '@/components/Shell';
-import { Button, Card, ErrorText, Field, Input, Select, Table } from '@/components/ui';
+import { Button, Card, ErrorText, Field, Input, Pager, Select, Table } from '@/components/ui';
 import { api, getUser, num } from '@/lib/api';
-import { useApi } from '@/lib/hooks';
+import { useApi, usePaged } from '@/lib/hooks';
 
 type Kind = 'material' | 'product';
 
@@ -15,7 +15,14 @@ const TYPES: Record<Kind, [string, string][]> = {
 export default function Stock() {
   const materials = useApi<any[]>('/materials');
   const products = useApi<any[]>('/products');
-  const movements = useApi<any[]>('/stock-movements?limit=50');
+  const [typeFilter, setTypeFilter] = useState('');
+  const [dateFrom, setDateFrom] = useState('');
+  const [dateTo, setDateTo] = useState('');
+  const movements = usePaged('/stock-movements', {
+    type: typeFilter || undefined,
+    from: dateFrom ? new Date(dateFrom).toISOString() : undefined,
+    to: dateTo ? new Date(`${dateTo}T23:59:59.999`).toISOString() : undefined,
+  }, 20);
   const stocks = useApi<any>('/inventory');
   const [kind, setKind] = useState<Kind>('material');
   const [error, setError] = useState<string>();
@@ -86,8 +93,19 @@ export default function Stock() {
         </Card>
       </div>
       <Card title="Historique des mouvements">
+        <div className="mb-3 flex flex-wrap items-end gap-3">
+          <Field label="Type">
+            <Select value={typeFilter} onChange={(e) => setTypeFilter(e.target.value)} className="w-44">
+              <option value="">Tous</option>
+              {['ENTRY', 'EXIT', 'PRODUCTION', 'LOSS', 'RETURN', 'ADJUSTMENT'].map((t) => <option key={t}>{t}</option>)}
+            </Select>
+          </Field>
+          <Field label="Du"><Input type="date" value={dateFrom} onChange={(e) => setDateFrom(e.target.value)} /></Field>
+          <Field label="Au"><Input type="date" value={dateTo} onChange={(e) => setDateTo(e.target.value)} /></Field>
+        </div>
+        <ErrorText>{movements.error}</ErrorText>
         <Table head={['Date', 'Type', 'Élément', 'Quantité', 'Référence', 'Par']}>
-          {movements.data?.map((m) => (
+          {movements.items.map((m: any) => (
             <tr key={m.id}>
               <td>{new Date(m.createdAt).toLocaleString('fr-FR')}</td><td>{m.type}</td>
               <td>{m.material?.name ?? m.product?.name}</td>
@@ -96,6 +114,7 @@ export default function Stock() {
             </tr>
           ))}
         </Table>
+        <Pager page={movements.page} pageSize={movements.pageSize} total={movements.total} onPage={movements.setPage} />
       </Card>
     </>
   );

@@ -58,3 +58,17 @@ export const Table = ({ head, children }: { head: string[]; children: ReactNode 
 
 export const ErrorText = ({ children }: { children?: ReactNode }) =>
   children ? <p role="alert" className="rounded-md bg-red-50 px-3 py-2 text-sm text-red-700 dark:bg-red-900/30 dark:text-red-300">{children}</p> : null;
+
+export function Pager({ page, pageSize, total, onPage }: { page: number; pageSize: number; total: number; onPage: (p: number) => void }) {
+  if (total <= pageSize) return total ? <p className="mt-2 text-xs text-zinc-500">{total} résultat{total > 1 ? 's' : ''}</p> : <p className="mt-2 text-xs text-zinc-500">Aucun résultat.</p>;
+  const last = Math.ceil(total / pageSize) - 1;
+  return (
+    <div className="mt-3 flex items-center justify-between text-xs text-zinc-500">
+      <span>{page * pageSize + 1}–{Math.min((page + 1) * pageSize, total)} sur {total}</span>
+      <span className="flex gap-2">
+        <Button variant="ghost" disabled={page === 0} onClick={() => onPage(page - 1)}>Précédent</Button>
+        <Button variant="ghost" disabled={page >= last} onClick={() => onPage(page + 1)}>Suivant</Button>
+      </span>
+    </div>
+  );
+}

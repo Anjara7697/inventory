@@ -1,9 +1,12 @@
 import { BadRequestException, Injectable, NotFoundException } from '@nestjs/common';
 import { Prisma } from '@prisma/client';
+import { PageQuery } from '../common/paging';
 import { PrismaService } from '../prisma/prisma.service';
 import {
   CreateMaterialDto, MaterialCharacteristicDto, SetCharacteristicsDto, UpdateMaterialDto,
 } from './materials.dto';
+
+export interface ListQuery extends PageQuery { search?: string; includeInactive?: boolean }
 
 const include = {
   unit: { include: { category: true } },
@@ -15,20 +18,24 @@ const include = {
 export class MaterialsService {
   constructor(private prisma: PrismaService) {}
 
-  findAll(search?: string, includeInactive = false) {
-    return this.prisma.material.findMany({
-      where: {
-        ...(includeInactive ? {} : { active: true }),
-        ...(search && {
-          OR: [
-            { name: { contains: search, mode: 'insensitive' } },
-            { sku: { contains: search, mode: 'insensitive' } },
-          ],
-        }),
-      },
-      include,
-      orderBy: { id: 'asc' },
-    });
+  private where(q: ListQuery): Prisma.MaterialWhereInput {
+    return {
+      ...(q.includeInactive ? {} : { active: true }),
+      ...(q.search && {
+        OR: [
+          { name: { contains: q.search, mode: 'insensitive' } },
+          { sku: { contains: q.search, mode: 'insensitive' } },
+        ],
+      }),
+    };
+  }
+
+  findAll(q: ListQuery) {
+    return this.prisma.material.findMany({ where: this.where(q), include, orderBy: { id: 'asc' }, take: q.limit, skip: q.offset });
+  }
+
+  count(q: ListQuery) {
+    return this.prisma.material.count({ where: this.where(q) });
   }
 
   async findOne(id: number) {

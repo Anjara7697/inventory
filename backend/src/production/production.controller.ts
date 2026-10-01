@@ -1,4 +1,7 @@
-import { Body, Controller, Get, HttpCode, Param, ParseIntPipe, Post, Query } from '@nestjs/common';
+import { BadRequestException, Body, Controller, Get, HttpCode, Param, ParseIntPipe, Post, Query, Res } from '@nestjs/common';
+import { ProductionStatus } from '@prisma/client';
+import { Response } from 'express';
+import { parseId, parsePage, withTotal } from '../common/paging';
 import { ApiBearerAuth, ApiTags } from '@nestjs/swagger';
 import { AuthUser, CurrentUser, Roles } from '../common/roles';
 import { PlanningService } from './planning.service';
@@ -10,8 +13,14 @@ import { ProductionService } from './production.service';
 export class ProductionController {
   constructor(private production: ProductionService, private planning: PlanningService) {}
 
-  @Get('production') findAll(@Query('productId') productId?: string) {
-    return this.production.findAll(productId ? Number(productId) : undefined);
+  @Get('production') findAll(
+    @Res({ passthrough: true }) res: Response,
+    @Query('productId') productId?: string, @Query('status') status?: string,
+    @Query('limit') limit?: string, @Query('offset') offset?: string,
+  ) {
+    if (status && !(status in ProductionStatus)) throw new BadRequestException('Invalid status');
+    const q = { productId: parseId(productId, 'productId'), status: status as ProductionStatus | undefined, ...parsePage(limit, offset) };
+    return withTotal(res, q, () => this.production.findAll(q), () => this.production.count(q));
   }
   @Get('production/:id') findOne(@Param('id', ParseIntPipe) id: number) { return this.production.findOne(id); }
 

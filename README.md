@@ -75,3 +75,9 @@ npm run test:e2e    # API + PostgreSQL — DATABASE_URL doit viser une base jeta
 
 - Une commande suit `DRAFT → ORDERED → RECEIVED` (ou `CANCELLED`). Seul un brouillon est modifiable. La réception crée une entrée de stock par ligne (référence `PO-00001`), dans l'unité du stock, en une transaction ; une double réception ne peut pas ajouter le stock deux fois.
 - Sur la fiche d'un produit, si la production est impossible, un bouton crée un brouillon de commande pré-rempli avec les matières manquantes.
+
+### Annulation, listes et filtres
+
+- `POST /production/:id/cancel` (manager) : inverse tous les mouvements de la production dans une transaction (matières remises en stock, produits fabriqués retirés). Refusé en 409, sans rien modifier, si les produits fabriqués ne sont plus en stock (déjà vendus). Possible même si le produit ou une matière a été désactivé depuis. Les statuts `PENDING` et `IN_PROGRESS` du schéma sont réservés (une production est créée directement terminée).
+- Les listes `products`, `materials`, `stock-movements`, `production` et `purchase-orders` acceptent `limit` (1–200) et `offset` ; le total est dans l'en-tête `X-Total-Count`. Filtres : `search` + `includeInactive` (produits, matières), `type`, `from`, `to`, `materialId`, `productId`, `reference` (mouvements), `status` (productions, commandes).
+- Interface : recherche, pagination, filtres, affichage des éléments inactifs avec « Réactiver ». La page Stocks gère aussi les mouvements de produits finis (vente, retour, stock initial).

@@ -2,16 +2,18 @@
 import Link from 'next/link';
 import { useState } from 'react';
 import { canWrite } from '@/components/Shell';
-import { Badge, Card, ErrorText, Table } from '@/components/ui';
+import { Badge, Card, ErrorText, Field, Pager, Select, Table } from '@/components/ui';
 import { api, getUser, num } from '@/lib/api';
-import { useApi } from '@/lib/hooks';
+import { usePaged } from '@/lib/hooks';
 
 const STATUS: Record<string, [string, 'green' | 'red' | 'gray' | 'amber']> = {
   COMPLETED: ['Terminée', 'green'], CANCELLED: ['Annulée', 'red'], PENDING: ['En attente', 'gray'], IN_PROGRESS: ['En cours', 'amber'],
 };
 
 export default function ProductionHistory() {
-  const { data, error, reload } = useApi<any[]>('/production');
+  const [status, setStatus] = useState('');
+  const list = usePaged('/production', { status: status || undefined });
+  const { error, reload } = list;
   const [actionError, setActionError] = useState<string>();
   const manager = canWrite(getUser(), 'MANAGER');
 
@@ -28,8 +30,9 @@ export default function ProductionHistory() {
       <p className="text-sm text-zinc-500">Pour lancer une production, ouvrez la page d'un produit.</p>
       <ErrorText>{error ?? actionError}</ErrorText>
       <Card title="Historique">
+        <div className="mb-3"><Field label="Statut"><Select value={status} onChange={(e) => setStatus(e.target.value)} className="w-44"><option value="">Tous</option><option value="COMPLETED">Terminée</option><option value="CANCELLED">Annulée</option></Select></Field></div>
         <Table head={['#', 'Date', 'Produit', 'Quantité', 'Statut', 'Par', '']}>
-          {data?.map((p) => (
+          {list.items.map((p: any) => (
             <tr key={p.id}>
               <td className="font-mono text-xs">PROD-{String(p.id).padStart(5, '0')}</td>
               <td>{new Date(p.createdAt).toLocaleString('fr-FR')}</td>
@@ -41,6 +44,7 @@ export default function ProductionHistory() {
             </tr>
           ))}
         </Table>
+        <Pager page={list.page} pageSize={list.pageSize} total={list.total} onPage={list.setPage} />
       </Card>
     </>
   );
