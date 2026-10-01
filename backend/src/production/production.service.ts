@@ -69,6 +69,40 @@ export class ProductionService {
     });
   }
 
+  /**
+   * Cancels a COMPLETED production: every movement of the production is reversed
+   * (materials go back to stock, finished products are removed) in one transaction.
+   * Refused (409, nothing changed) if the finished products were already used/sold.
+   */
+  async cancel(id: number, userId: number) {
+    await this.prisma.$transaction(async (tx) => {
+      const claimed = await tx.production.updateMany({ where: { id, status: 'COMPLETED' }, data: { status: 'CANCELLED' } });
+      if (claimed.count === 0) {
+        const p = await tx.production.findUnique({ where: { id } });
+        if (!p) throw new NotFoundException('Production not found');
+        throw new ConflictException(`Production is ${p.status}, only COMPLETED productions can be cancelled`);
+      }
+      const reference = this.ref(id);
+      const movements = await tx.stockMovement.findMany({ where: { reference, type: 'PRODUCTION' }, orderBy: { id: 'asc' } });
+      // remove the finished products first: if they are gone, we fail before touching materials
+      const ordered = [...movements].sort((a, b) => Number(!!b.productId) - Number(!!a.productId));
+      for (const m of ordered) {
+        try {
+          await this.inventory.applyMovement(tx, {
+            type: 'PRODUCTION', materialId: m.materialId ?? undefined, productId: m.productId ?? undefined,
+            quantity: m.quantity.neg(), unitId: m.unitId, userId, reference, reason: `Cancellation of ${reference}`,
+          });
+        } catch (e) {
+          if (e instanceof ConflictException && m.productId) {
+            throw new ConflictException('Cannot cancel: the finished products of this production are no longer in stock');
+          }
+          throw e;
+        }
+      }
+    });
+    return this.findOne(id); // read after commit
+  }
+
   private ref(id: number) {
     return `PROD-${String(id).padStart(5, '0')}`;
   }

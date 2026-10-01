@@ -150,4 +150,34 @@ describe('Stock & production (e2e)', () => {
     const again = (await http.get('/inventory/alerts').set(auth(viewer))).body.map((a: any) => [a.name, a.type]);
     expect(again).toContainEqual(['TISSU', 'LOW_STOCK']);
   });
+
+  it('cancels a production: reverses every movement, once, managers only', async () => {
+    const before = { t: await matQty(tissu.id), f: await matQty(ferm.id), b: await matQty(bouton.id), p: await prodQty(pant.id) };
+    await enter(ferm.id, 10).expect(201); await enter(tissu.id, 100).expect(201); await enter(bouton.id, 100).expect(201);
+    const made = (await http.post('/production').set(auth(admin)).send({ productId: pant.id, quantity: 5 }).expect(201)).body;
+    expect(await prodQty(pant.id)).toBe(before.p + 5);
+
+    await http.post(`/production/${made.id}/cancel`).set(auth(operator)).expect(403);
+    const c = (await http.post(`/production/${made.id}/cancel`).set(auth(admin)).expect(200)).body;
+    expect(c.status).toBe('CANCELLED');
+    expect(await prodQty(pant.id)).toBe(before.p);
+    expect(await matQty(tissu.id)).toBe(before.t + 100);
+    expect(await matQty(ferm.id)).toBe(before.f + 10);
+    expect(await matQty(bouton.id)).toBe(before.b + 100);
+    // the ledger still sums to the stock
+    const sum = await prisma.stockMovement.aggregate({ _sum: { quantity: true }, where: { materialId: ferm.id } });
+    expect(Number(sum._sum.quantity)).toBe(await matQty(ferm.id));
+    await http.post(`/production/${made.id}/cancel`).set(auth(admin)).expect(409); // already cancelled
+    await http.post('/production/9999/cancel').set(auth(admin)).expect(404);
+  });
+
+  it('refuses to cancel when the finished products were already sold, and changes nothing', async () => {
+    const made = (await http.post('/production').set(auth(admin)).send({ productId: pant.id, quantity: 2 }).expect(201)).body;
+    const stockNow = await prodQty(pant.id);
+    await http.post('/stock-movements').set(auth(admin)).send({ type: 'EXIT', productId: pant.id, quantity: stockNow, reason: 'sale' }).expect(201);
+    const t = await matQty(tissu.id);
+    await http.post(`/production/${made.id}/cancel`).set(auth(admin)).expect(409);
+    expect(await matQty(tissu.id)).toBe(t);
+    expect((await prisma.production.findUniqueOrThrow({ where: { id: made.id } })).status).toBe('COMPLETED');
+  });
 });

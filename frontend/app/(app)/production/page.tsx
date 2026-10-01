@@ -1,26 +1,43 @@
 'use client';
 import Link from 'next/link';
+import { useState } from 'react';
+import { canWrite } from '@/components/Shell';
 import { Badge, Card, ErrorText, Table } from '@/components/ui';
-import { num } from '@/lib/api';
+import { api, getUser, num } from '@/lib/api';
 import { useApi } from '@/lib/hooks';
 
+const STATUS: Record<string, [string, 'green' | 'red' | 'gray' | 'amber']> = {
+  COMPLETED: ['Terminée', 'green'], CANCELLED: ['Annulée', 'red'], PENDING: ['En attente', 'gray'], IN_PROGRESS: ['En cours', 'amber'],
+};
+
 export default function ProductionHistory() {
-  const { data, error } = useApi<any[]>('/production');
+  const { data, error, reload } = useApi<any[]>('/production');
+  const [actionError, setActionError] = useState<string>();
+  const manager = canWrite(getUser(), 'MANAGER');
+
+  async function cancel(p: any) {
+    if (!confirm(`Annuler la production de ${num(p.quantity)} × ${p.product.name} ? Les matières reviennent en stock et les produits fabriqués sont retirés.`)) return;
+    setActionError(undefined);
+    try { await api(`/production/${p.id}/cancel`, { method: 'POST' }); reload(); }
+    catch (e) { setActionError((e as Error).message); }
+  }
+
   return (
     <>
       <h1 className="text-xl font-semibold">Production</h1>
       <p className="text-sm text-zinc-500">Pour lancer une production, ouvrez la page d'un produit.</p>
-      <ErrorText>{error}</ErrorText>
+      <ErrorText>{error ?? actionError}</ErrorText>
       <Card title="Historique">
-        <Table head={['#', 'Date', 'Produit', 'Quantité', 'Statut', 'Par']}>
+        <Table head={['#', 'Date', 'Produit', 'Quantité', 'Statut', 'Par', '']}>
           {data?.map((p) => (
             <tr key={p.id}>
               <td className="font-mono text-xs">PROD-{String(p.id).padStart(5, '0')}</td>
               <td>{new Date(p.createdAt).toLocaleString('fr-FR')}</td>
               <td><Link className="underline" href={`/products/${p.productId}`}>{p.product.name}</Link></td>
               <td>{num(p.quantity)}</td>
-              <td><Badge tone={p.status === 'COMPLETED' ? 'green' : 'gray'}>{p.status}</Badge></td>
+              <td><Badge tone={STATUS[p.status][1]}>{STATUS[p.status][0]}</Badge></td>
               <td>{p.user.firstName}</td>
+              <td className="text-right">{manager && p.status === 'COMPLETED' && <button className="text-xs text-red-600 underline" onClick={() => cancel(p)}>Annuler</button>}</td>
             </tr>
           ))}
         </Table>

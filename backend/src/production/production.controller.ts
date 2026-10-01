@@ -1,4 +1,4 @@
-import { Body, Controller, Get, Param, ParseIntPipe, Post, Query } from '@nestjs/common';
+import { Body, Controller, Get, HttpCode, Param, ParseIntPipe, Post, Query } from '@nestjs/common';
 import { ApiBearerAuth, ApiTags } from '@nestjs/swagger';
 import { AuthUser, CurrentUser, Roles } from '../common/roles';
 import { PlanningService } from './planning.service';
@@ -19,6 +19,9 @@ export class ProductionController {
   create(@Body() dto: CreateProductionDto, @CurrentUser() user: AuthUser) {
     return this.production.create(dto.productId, dto.quantity, user.id);
   }
+
+  @Roles('MANAGER') @Post('production/:id/cancel') @HttpCode(200)
+  cancel(@Param('id', ParseIntPipe) id: number, @CurrentUser() user: AuthUser) { return this.production.cancel(id, user.id); }
 
   @Get('products/:id/production-capacity')
   capacity(@Param('id', ParseIntPipe) id: number) { return this.planning.capacity(id); }
