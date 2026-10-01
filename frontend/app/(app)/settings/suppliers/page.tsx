@@ -1,73 +1,93 @@
 'use client';
 import { FormEvent, useState } from 'react';
+import { IconPlus } from '@/components/icons';
+import { ConfirmRow, RowActions } from '@/components/RowActions';
 import { canWrite } from '@/components/Shell';
-import { Button, Card, ErrorText, Field, Input, Table } from '@/components/ui';
+import { Button, Card, ErrorText, Field, Input, Loading, Table } from '@/components/ui';
 import { api, getUser } from '@/lib/api';
 import { useApi } from '@/lib/hooks';
 
+const EMPTY = { name: '', contact: '', email: '', phone: '' };
+type Draft = typeof EMPTY;
+
 export default function SuppliersSettings() {
-  const { data, reload } = useApi<any[]>('/suppliers');
+  const { data, reload, loading, error: loadError } = useApi<any[]>('/suppliers');
   const [error, setError] = useState<string>();
+  const [notice, setNotice] = useState<string>();
   const writable = canWrite(getUser(), 'MANAGER');
-  const [editing, setEditing] = useState<number>();
-  const [draft, setDraft] = useState<Record<string, string>>({});
-  const set = (k: string) => (e: React.ChangeEvent<HTMLInputElement>) => setDraft({ ...draft, [k]: e.target.value });
+  const [editing, setEditing] = useState<number | 'new'>();
+  const [deleting, setDeleting] = useState<number>();
+  const [draft, setDraft] = useState<Draft>(EMPTY);
 
-  async function save(id: number) {
-    setError(undefined);
-    try { await api(`/suppliers/${id}`, { method: 'PATCH', body: { ...draft, email: draft.email || undefined } }); setEditing(undefined); reload(); }
-    catch (err) { setError((err as Error).message); }
+  async function run(fn: () => Promise<any>, after?: (r: any) => void) {
+    setError(undefined); setNotice(undefined);
+    try { const r = await fn(); setEditing(undefined); setDeleting(undefined); after?.(r); reload(); } catch (err) { setError((err as Error).message); }
   }
+  // empty optional fields are omitted (the API validates the email format)
+  const body = () => Object.fromEntries(Object.entries(draft).filter(([k, v]) => k === 'name' || v !== ''));
+  const set = (k: keyof Draft) => (e: React.ChangeEvent<HTMLInputElement>) => setDraft({ ...draft, [k]: e.target.value });
+  const add = (e: FormEvent) => { e.preventDefault(); run(() => api('/suppliers', { method: 'POST', body: body() })); };
 
-  async function add(e: FormEvent<HTMLFormElement>) {
-    e.preventDefault(); const form = e.currentTarget; const f = new FormData(form);
-    const body = Object.fromEntries([...f].filter(([, v]) => v !== ''));
-    setError(undefined);
-    try { await api('/suppliers', { method: 'POST', body }); form.reset(); reload(); } catch (err) { setError((err as Error).message); }
-  }
-  async function del(s: any) {
-    if (!confirm(`Supprimer « ${s.name} » ? S'il a des commandes, il sera désactivé.`)) return;
-    setError(undefined);
-    try { await api(`/suppliers/${s.id}`, { method: 'DELETE' }); reload(); } catch (err) { setError((err as Error).message); }
-  }
-
+  if (loading) return <Loading />;
   return (
     <>
-      <ErrorText>{error}</ErrorText>
-      {writable && (
+      <div className="-mt-2 flex flex-wrap items-center justify-between gap-3">
+        <p className="max-w-2xl text-[13px] text-ink-muted">Les fournisseurs apparaissent dans les commandes d'achat. Un fournisseur qui a déjà des commandes est désactivé au lieu d'être supprimé.</p>
+        {writable && editing !== 'new' && <Button variant="secondary" onClick={() => { setEditing('new'); setDraft(EMPTY); setError(undefined); }}><IconPlus />Nouveau fournisseur</Button>}
+      </div>
+      <ErrorText>{error ?? loadError}</ErrorText>
+      {notice && <p role="status" className="rounded-lg bg-success-soft px-3 py-2 text-sm text-success">{notice}</p>}
+
+      {editing === 'new' && (
         <Card title="Nouveau fournisseur">
-          <form onSubmit={add} className="grid grid-cols-1 items-end gap-2 sm:grid-cols-5">
-            <Field label="Nom"><Input name="name" required maxLength={150} /></Field>
-            <Field label="Contact"><Input name="contact" maxLength={255} /></Field>
-            <Field label="Email"><Input name="email" type="email" /></Field>
-            <Field label="Téléphone"><Input name="phone" maxLength={50} /></Field>
-            <Button>Ajouter</Button>
+          <form onSubmit={add} className="grid items-end gap-3 sm:grid-cols-2 lg:grid-cols-[1.3fr_1fr_1.3fr_1fr_auto]">
+            <Field label="Nom"><Input required maxLength={150} value={draft.name} onChange={set('name')} placeholder="Tissus Analamanga" /></Field>
+            <Field label="Contact"><Input maxLength={255} value={draft.contact} onChange={set('contact')} placeholder="Service commercial" /></Field>
+            <Field label="Email"><Input type="email" value={draft.email} onChange={set('email')} /></Field>
+            <Field label="Téléphone"><Input maxLength={50} value={draft.phone} onChange={set('phone')} /></Field>
+            <span className="flex gap-2">
+              <Button type="button" variant="ghost" onClick={() => setEditing(undefined)}>Annuler</Button>
+              <Button>Ajouter</Button>
+            </span>
           </form>
         </Card>
       )}
-      <Card>
-        <Table head={['Nom', 'Contact', 'Email', 'Téléphone', '']}>
-          {data?.map((s) => editing === s.id ? (
-            <tr key={s.id}>
-              <td><Input value={draft.name ?? ''} maxLength={150} onChange={set('name')} /></td>
-              <td><Input value={draft.contact ?? ''} maxLength={255} onChange={set('contact')} /></td>
-              <td><Input type="email" value={draft.email ?? ''} onChange={set('email')} /></td>
-              <td><Input value={draft.phone ?? ''} maxLength={50} onChange={set('phone')} /></td>
-              <td className="space-x-2 whitespace-nowrap text-right">
-                <button className="text-xs underline" onClick={() => save(s.id)}>Enregistrer</button>
-                <button className="text-xs underline" onClick={() => setEditing(undefined)}>Annuler</button>
-              </td>
-            </tr>
-          ) : (
-            <tr key={s.id}>
-              <td>{s.name}</td><td>{s.contact}</td><td>{s.email}</td><td>{s.phone}</td>
-              <td className="space-x-2 whitespace-nowrap text-right">{writable && <>
-                <button className="text-xs underline" onClick={() => { setEditing(s.id); setDraft({ name: s.name, contact: s.contact ?? '', email: s.email ?? '', phone: s.phone ?? '' }); setError(undefined); }}>Modifier</button>
-                <button className="text-xs text-red-600 underline" onClick={() => del(s)}>Supprimer</button>
-              </>}</td>
-            </tr>
-          ))}
+
+      <Card flush>
+        <Table head={['Fournisseur', 'Contact', 'Email', 'Téléphone', '']}>
+          {data?.map((s) => {
+            if (deleting === s.id) return (
+              <ConfirmRow key={s.id} colSpan={5} onCancel={() => setDeleting(undefined)}
+                onConfirm={() => run(() => api(`/suppliers/${s.id}`, { method: 'DELETE' }), (r) => r?.deactivated && setNotice(`${s.name} a des commandes : il a été désactivé.`))}>
+                Supprimer « {s.name} » ? S'il a des commandes, il sera seulement désactivé.
+              </ConfirmRow>
+            );
+            if (editing === s.id) return (
+              <tr key={s.id}>
+                <td><Input aria-label="Nom" value={draft.name} maxLength={150} onChange={set('name')} /></td>
+                <td><Input aria-label="Contact" value={draft.contact} maxLength={255} onChange={set('contact')} /></td>
+                <td><Input aria-label="Email" type="email" value={draft.email} onChange={set('email')} /></td>
+                <td><Input aria-label="Téléphone" value={draft.phone} maxLength={50} onChange={set('phone')} /></td>
+                <td className="text-right whitespace-nowrap">
+                  <Button variant="ghost" size="sm" onClick={() => setEditing(undefined)}>Annuler</Button>
+                  <Button size="sm" onClick={() => run(() => api(`/suppliers/${s.id}`, { method: 'PATCH', body: { ...draft, email: draft.email || undefined } }))}>Enregistrer</Button>
+                </td>
+              </tr>
+            );
+            return (
+              <tr key={s.id}>
+                <td className="font-medium">{s.name}</td>
+                <td className="text-ink-muted">{s.contact || '—'}</td>
+                <td className="select-all">{s.email || <span className="text-ink-muted">—</span>}</td>
+                <td className="tabular-nums select-all">{s.phone || <span className="text-ink-muted">—</span>}</td>
+                <td>{writable && <RowActions name={s.name}
+                  onEdit={() => { setEditing(s.id); setDeleting(undefined); setDraft({ name: s.name, contact: s.contact ?? '', email: s.email ?? '', phone: s.phone ?? '' }); setError(undefined); }}
+                  onDelete={() => { setDeleting(s.id); setEditing(undefined); }} />}</td>
+              </tr>
+            );
+          })}
         </Table>
+        {data?.length === 0 && <p className="px-4 py-3 text-sm text-ink-muted">Aucun fournisseur. Ajoutez-en un pour passer des commandes d'achat.</p>}
       </Card>
     </>
   );

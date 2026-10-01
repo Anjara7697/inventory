@@ -21,3 +21,6 @@ export const IconLogout = make(<path d="M15 4h4v16h-4M10 8l-4 4 4 4M6 12h11" />)
 export const IconMenu = make(<path d="M4 7h16M4 12h16M4 17h16" />);
 export const IconClose = make(<path d="M6 6l12 12M18 6 6 18" />);
 export const IconPlus = make(<path d="M12 5v14M5 12h14" />);
+export const IconPencil = make(<path d="M4 20h4L19 9l-4-4L4 16z" />);
+export const IconTrash = make(<path d="M5 7h14M10 7V4h4v3M7 7l1 13h8l1-13" />);
+export const IconCheck = make(<path d="M5 12l5 5 9-10" />);
