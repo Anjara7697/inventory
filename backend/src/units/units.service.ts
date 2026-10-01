@@ -1,4 +1,4 @@
-import { BadRequestException, Injectable, NotFoundException } from '@nestjs/common';
+import { BadRequestException, ConflictException, Injectable, NotFoundException } from '@nestjs/common';
 import { Prisma, Unit } from '@prisma/client';
 import { PrismaService } from '../prisma/prisma.service';
 import { CreateUnitCategoryDto, CreateUnitDto, UpdateUnitCategoryDto, UpdateUnitDto } from './units.dto';
@@ -42,7 +42,28 @@ export class UnitsService {
     return unit;
   }
   createUnit(dto: CreateUnitDto) { return this.prisma.unit.create({ data: dto }); }
-  updateUnit(id: number, dto: UpdateUnitDto) { return this.prisma.unit.update({ where: { id }, data: dto }); }
+  /**
+   * Name / symbol / code are always editable. The category and the conversion factor define what
+   * stored quantities mean, so they are frozen once the unit is used anywhere.
+   */
+  async updateUnit(id: number, dto: UpdateUnitDto) {
+    const current = await this.getUnit(id);
+    const changesMeaning =
+      (dto.categoryId !== undefined && dto.categoryId !== current.categoryId) ||
+      (dto.conversionFactor !== undefined && !current.conversionFactor.eq(dto.conversionFactor));
+    if (changesMeaning) {
+      const [materials, bom, movements, purchases] = await Promise.all([
+        this.prisma.material.count({ where: { unitId: id } }),
+        this.prisma.productMaterial.count({ where: { unitId: id } }),
+        this.prisma.stockMovement.count({ where: { unitId: id } }),
+        this.prisma.purchaseOrderLine.count({ where: { unitId: id } }),
+      ]);
+      if (materials + bom + movements + purchases > 0) {
+        throw new ConflictException('This unit is already used: only its name, symbol and code can be changed');
+      }
+    }
+    return this.prisma.unit.update({ where: { id }, data: dto });
+  }
   async removeUnit(id: number) { await this.prisma.unit.delete({ where: { id } }); }
 
   async convert(value: number, fromId: number, toId: number) {

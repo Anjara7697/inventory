@@ -11,6 +11,14 @@ export default function CharacteristicsSettings() {
   const { data, reload } = useApi<any[]>('/characteristics');
   const [error, setError] = useState<string>();
   const writable = canWrite(getUser(), 'MANAGER');
+  const [editing, setEditing] = useState<number>();
+  const [draft, setDraft] = useState({ name: '', code: '', dataType: 'STRING' });
+
+  async function save(id: number) {
+    setError(undefined);
+    try { await api(`/characteristics/${id}`, { method: 'PATCH', body: { ...draft, code: draft.code.toUpperCase() } }); setEditing(undefined); reload(); }
+    catch (err) { setError((err as Error).message); }
+  }
 
   async function add(e: FormEvent<HTMLFormElement>) {
     e.preventDefault(); const form = e.currentTarget; const f = new FormData(form);
@@ -41,10 +49,23 @@ export default function CharacteristicsSettings() {
       )}
       <Card>
         <Table head={['Nom', 'Code', 'Type', '']}>
-          {data?.map((c) => (
+          {data?.map((c) => editing === c.id ? (
+            <tr key={c.id}>
+              <td><Input value={draft.name} maxLength={100} onChange={(e) => setDraft({ ...draft, name: e.target.value })} /></td>
+              <td><Input value={draft.code} maxLength={50} onChange={(e) => setDraft({ ...draft, code: e.target.value })} /></td>
+              <td><Select value={draft.dataType} onChange={(e) => setDraft({ ...draft, dataType: e.target.value })}>{Object.entries(TYPES).map(([v, l]) => <option key={v} value={v}>{l}</option>)}</Select></td>
+              <td className="space-x-2 whitespace-nowrap text-right">
+                <button className="text-xs underline" onClick={() => save(c.id)}>Enregistrer</button>
+                <button className="text-xs underline" onClick={() => setEditing(undefined)}>Annuler</button>
+              </td>
+            </tr>
+          ) : (
             <tr key={c.id}>
               <td>{c.name}</td><td className="font-mono text-xs">{c.code}</td><td><Badge>{TYPES[c.dataType]}</Badge></td>
-              <td className="text-right">{writable && <button className="text-xs text-red-600 underline" onClick={() => del(c)}>Supprimer</button>}</td>
+              <td className="space-x-2 whitespace-nowrap text-right">{writable && <>
+                <button className="text-xs underline" onClick={() => { setEditing(c.id); setDraft({ name: c.name, code: c.code, dataType: c.dataType }); setError(undefined); }}>Modifier</button>
+                <button className="text-xs text-red-600 underline" onClick={() => del(c)}>Supprimer</button>
+              </>}</td>
             </tr>
           ))}
         </Table>

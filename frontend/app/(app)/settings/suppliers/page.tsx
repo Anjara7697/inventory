@@ -9,6 +9,15 @@ export default function SuppliersSettings() {
   const { data, reload } = useApi<any[]>('/suppliers');
   const [error, setError] = useState<string>();
   const writable = canWrite(getUser(), 'MANAGER');
+  const [editing, setEditing] = useState<number>();
+  const [draft, setDraft] = useState<Record<string, string>>({});
+  const set = (k: string) => (e: React.ChangeEvent<HTMLInputElement>) => setDraft({ ...draft, [k]: e.target.value });
+
+  async function save(id: number) {
+    setError(undefined);
+    try { await api(`/suppliers/${id}`, { method: 'PATCH', body: { ...draft, email: draft.email || undefined } }); setEditing(undefined); reload(); }
+    catch (err) { setError((err as Error).message); }
+  }
 
   async function add(e: FormEvent<HTMLFormElement>) {
     e.preventDefault(); const form = e.currentTarget; const f = new FormData(form);
@@ -38,10 +47,24 @@ export default function SuppliersSettings() {
       )}
       <Card>
         <Table head={['Nom', 'Contact', 'Email', 'Téléphone', '']}>
-          {data?.map((s) => (
+          {data?.map((s) => editing === s.id ? (
+            <tr key={s.id}>
+              <td><Input value={draft.name ?? ''} maxLength={150} onChange={set('name')} /></td>
+              <td><Input value={draft.contact ?? ''} maxLength={255} onChange={set('contact')} /></td>
+              <td><Input type="email" value={draft.email ?? ''} onChange={set('email')} /></td>
+              <td><Input value={draft.phone ?? ''} maxLength={50} onChange={set('phone')} /></td>
+              <td className="space-x-2 whitespace-nowrap text-right">
+                <button className="text-xs underline" onClick={() => save(s.id)}>Enregistrer</button>
+                <button className="text-xs underline" onClick={() => setEditing(undefined)}>Annuler</button>
+              </td>
+            </tr>
+          ) : (
             <tr key={s.id}>
               <td>{s.name}</td><td>{s.contact}</td><td>{s.email}</td><td>{s.phone}</td>
-              <td className="text-right">{writable && <button className="text-xs text-red-600 underline" onClick={() => del(s)}>Supprimer</button>}</td>
+              <td className="space-x-2 whitespace-nowrap text-right">{writable && <>
+                <button className="text-xs underline" onClick={() => { setEditing(s.id); setDraft({ name: s.name, contact: s.contact ?? '', email: s.email ?? '', phone: s.phone ?? '' }); setError(undefined); }}>Modifier</button>
+                <button className="text-xs text-red-600 underline" onClick={() => del(s)}>Supprimer</button>
+              </>}</td>
             </tr>
           ))}
         </Table>

@@ -81,3 +81,7 @@ npm run test:e2e    # API + PostgreSQL — DATABASE_URL doit viser une base jeta
 - `POST /production/:id/cancel` (manager) : inverse tous les mouvements de la production dans une transaction (matières remises en stock, produits fabriqués retirés). Refusé en 409, sans rien modifier, si les produits fabriqués ne sont plus en stock (déjà vendus). Possible même si le produit ou une matière a été désactivé depuis. Les statuts `PENDING` et `IN_PROGRESS` du schéma sont réservés (une production est créée directement terminée).
 - Les listes `products`, `materials`, `stock-movements`, `production` et `purchase-orders` acceptent `limit` (1–200) et `offset` ; le total est dans l'en-tête `X-Total-Count`. Filtres : `search` + `includeInactive` (produits, matières), `type`, `from`, `to`, `materialId`, `productId`, `reference` (mouvements), `status` (productions, commandes).
 - Interface : recherche, pagination, filtres, affichage des éléments inactifs avec « Réactiver ». La page Stocks gère aussi les mouvements de produits finis (vente, retour, stock initial).
+
+### Édition du référentiel
+
+Unités, catégories d'unités, caractéristiques et fournisseurs sont modifiables dans Paramètres. Garde-fous : le facteur de conversion et la catégorie d'une unité, et le type d'une caractéristique, sont figés dès qu'ils sont utilisés (sinon les quantités déjà enregistrées changeraient de sens) ; nom, symbole et code restent modifiables.

@@ -127,4 +127,26 @@ describe('Inventory API (e2e)', () => {
     await http.patch(`/users/${me.id}`).set(auth(admin)).send({ role: 'VIEWER' }).expect(400);
     await http.delete(`/users/${me.id}`).set(auth(admin)).expect(400);
   });
+
+  it('edits reference data but freezes what would change the meaning of stored quantities', async () => {
+    // m is used by a material and BOM lines (see previous tests)
+    await http.patch(`/units/${m.id}`).set(auth(admin)).send({ name: 'Metre', symbol: 'M.' }).expect(200);
+    await http.patch(`/units/${m.id}`).set(auth(admin)).send({ conversionFactor: 2 }).expect(409);
+    await http.patch(`/units/${m.id}`).set(auth(admin)).send({ categoryId: kg.categoryId }).expect(409);
+    await http.patch(`/units/${m.id}`).set(auth(admin)).send({ conversionFactor: 1 }).expect(200); // unchanged value is fine
+    // an unused unit can be fully changed
+    const unused = (await http.post('/units').set(auth(admin)).send({ name: 'Yard', symbol: 'yd', code: 'YD', categoryId: m.categoryId, conversionFactor: 1 })).body;
+    await http.patch(`/units/${unused.id}`).set(auth(admin)).send({ conversionFactor: 0.9144 }).expect(200);
+    // characteristics: rename ok, type frozen once used
+    const chars = (await http.get('/characteristics').set(auth(admin))).body;
+    const color = chars.find((c: any) => c.code === 'COULEUR');
+    await http.patch(`/characteristics/${color.id}`).set(auth(admin)).send({ name: 'Coloris' }).expect(200);
+    await http.patch(`/characteristics/${color.id}`).set(auth(admin)).send({ dataType: 'NUMBER' }).expect(409);
+    const free = (await http.post('/characteristics').set(auth(admin)).send({ name: 'Libre', code: 'LIBRE', dataType: 'STRING' })).body;
+    await http.patch(`/characteristics/${free.id}`).set(auth(admin)).send({ dataType: 'BOOLEAN' }).expect(200);
+    // categories
+    const cat = (await http.get('/unit-categories').set(auth(admin))).body[0];
+    await http.patch(`/unit-categories/${cat.id}`).set(auth(admin)).send({ name: 'Renamed' }).expect(200);
+    await http.patch(`/unit-categories/${cat.id}`).set(auth(admin)).send({ code: 'lower' }).expect(400);
+  });
 });
