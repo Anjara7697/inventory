@@ -1,5 +1,6 @@
 'use client';
 import Link from 'next/link';
+import { LogoMark } from './Logo';
 import { usePathname, useRouter } from 'next/navigation';
 import { ComponentType, ReactNode, useEffect, useState } from 'react';
 import { SessionUser, api, clearSession, getUser } from '@/lib/api';
@@ -30,7 +31,7 @@ export const canOpen = (path: string, u: SessionUser) =>
 
 const Brand = () => (
   <Link href="/" className="flex items-center gap-2.5 px-2 text-base font-semibold">
-    <span aria-hidden className="h-[22px] w-[22px] rounded-md bg-accent" />Inventory
+    <LogoMark />Inventory
   </Link>
 );
 
